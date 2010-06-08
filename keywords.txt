@@ -1,0 +1,22 @@
+_NTSC	LITERAL1
+_PAL	LITERAL1
+
+TVout	KEYWORD1
+
+begin	KEYWORD2
+pause	KEYWORD2
+resume	KEYWORD2
+hres	KEYWORD2
+vres	KEYWORD2
+char_line	KEYWORD2
+clear_screen	KEYWORD2
+fill	KEYWORD2
+delay	KEYWORD2
+set_pixel	KEYWORD2
+get_pixel	KEYWORD2
+draw_line	KEYWORD2
+print_char	KEYWORD2
+print_str	KEYWORD2
+invert	KEYWORD2
+fs_bitmap	KEYWORD2
+tone	KEYWORD2
