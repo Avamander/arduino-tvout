@@ -6,7 +6,7 @@ unsigned char x,y;
 void setup()  {
   x=0;
   y=0;
-  TV.start_render(_PAL);
+  TV.start_render(_PAL);	//for devices with only 1k sram(m168) use TV.begin(_PAL,128,56)
 }
 
 void loop() {

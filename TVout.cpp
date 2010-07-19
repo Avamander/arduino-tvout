@@ -58,23 +58,24 @@
 
 #include "TVout.h"
 #include "video_gen.h"
-#include "video_properties.h"
-#include "hardware_setup.h"
+#include "spec/video_properties.h"
+#include "spec/hardware_setup.h"
 
+// bad style I know but i dont feel like doing it the correct way.
 PROGMEM const unsigned char ascii3x5[] ={
-#include "ascii3x5.h"
+#include "fonts/ascii3x5.h"
 };
 
 PROGMEM const unsigned char ascii5x7[] = {
-#include "ascii5x7.h"
+#include "fonts/ascii5x7.h"
 };
 
 PROGMEM const unsigned char ascii8x8[] = {
-#include "ascii8x8.h"
+#include "fonts/ascii8x8.h"
 };
 
 PROGMEM const unsigned char bitmap[] = {
-#include "bitmap.h"
+#include "bitmaps/demobmp.h"
 };
 
 /* call this to start video output with the default resolution.
@@ -82,19 +83,7 @@ PROGMEM const unsigned char bitmap[] = {
  */
 char TVout::begin(uint8_t mode) {
 		
-	display.vscale = 1;
-	display.vscale_const = 1;
-	display.vres = 96;
-	display.hres = 128/8;
-	render_line = &render_line6c;
-	
-	display.screen = (unsigned char*)malloc(display.hres * display.vres * sizeof(unsigned char));
-	if (display.screen == NULL)
-		return 4;
-	
-	render_setup(mode);
-	
-	return 0;
+	return begin(mode,128,96);
 }
 
 /* call this to start video output with a specified resolution.
@@ -124,12 +113,20 @@ char TVout::begin(uint8_t mode, uint8_t x, uint8_t y) {
 	if (display.screen == NULL)
 		return 4;
 		
-	if ( display.hres >= 13 && display.hres <= 16 )
+	//this needs to be rewritten for compatibility with cpu freq other than 16mhz
+	if ( display.hres >= 13 && display.hres < 16 )
 		render_line = &render_line6c;
-	else if ( display.hres >= 17 && display.hres <= 19)
+	else if ( display.hres >= 16 && display.hres < 19)
 		render_line = &render_line5c;
+	else if (display.hres >= 19 && display.hres < 24)
+		render_line = &render_line4c;
+	//else if (display.hres >= 24 && display.hres < 25)		//not written yet.
+		//render_line = &render_line3c;
 	else
 		return 5;
+		
+	cursor_x = 0;
+	cursor_y = 0;
 	
 	render_setup(mode);
 	return 0;
@@ -155,15 +152,19 @@ void TVout::resume() {
 */
 void TVout::fill(uint8_t color) {
 	switch(color) {
-		case 0:
+		case BLACK:
+			cursor_x = 0;
+			cursor_y = 0;
 			for (int i = 0; i < (display.hres)*display.vres; i++)
 				display.screen[i] = 0;
 			break;
-		case 1:
+		case WHITE:
+			cursor_x = 0;
+			cursor_y = 0;
 			for (int i = 0; i < (display.hres)*display.vres; i++)
 				display.screen[i] = 0xFF;
 			break;
-		case 2:
+		case INVERT:
 			for (int i = 0; i < display.hres*display.vres; i++)
 				display.screen[i] = ~display.screen[i];
 			break;
@@ -193,25 +194,25 @@ char TVout::char_line() {
  * for PAL 1 second = 50 frames
  */
 void TVout::delay(unsigned int x) {
-	if (TIMSK1 & _BV(TOIE1)) {
+//	if (TIMSK1 & _BV(TOIE1)) {
 		while (x) {
 			while (display.scanLine != display.stop_render+1);
 			while (display.scanLine == display.stop_render+1);
 			x--;
 		}
-	}
-	else {
-		int lines;
-		while (x) {
-			lines = display.lines_frame;
-			while (lines) {
-				while (TCNT1 < _CYCLES_HORZ_SYNC);
-				while (TCNT1 > _CYCLES_HORZ_SYNC);
-				lines--;
-			}
-			x--;
-		}
-	}
+//	}
+//	else {
+//		int lines;
+//		while (x) {
+//			lines = display.lines_frame;
+//			while (lines) {
+//				while (TCNT1 < _CYCLES_HORZ_SYNC);
+//				while (TCNT1 > _CYCLES_HORZ_SYNC);
+//				lines--;
+//			}
+//			x--;
+//		}
+//	}
 }
 
 /* plot one point 
@@ -310,6 +311,7 @@ signed int x,y;
  * with fill 0 = black fill, 1 = white fill, 2 = invert fill, 3 = no fill
  * with radius for rounded box
  * safe draw or not 1 = safe
+ * Added by Andy Crook 2010
  */
 void TVout::draw_box(unsigned char x0, unsigned char y0,
 			   unsigned char x1, unsigned char y1, char c, char d, char e, char f)
@@ -482,7 +484,7 @@ void TVout::draw_box(unsigned char x0, unsigned char y0,
  * with color 1 = white, 0=black, 2=invert
  * with fill 0 = black fill, 1 = white fill, 2 = invert fill, 3 = no fill
  * safe draw or not 1 = safe
- * Added by Andy Cook 2010
+ * Added by Andy Crook 2010
  */
 void TVout::draw_circle(unsigned char x0, unsigned char y0,
 				unsigned char radius, char c, char d, char h) {
@@ -584,6 +586,43 @@ void TVout::draw_circle(unsigned char x0, unsigned char y0,
 	}
 }
 
+void TVout::shift(uint8_t distance, uint8_t direction) {
+	uint8_t * src;
+	uint8_t * dst;
+	uint8_t * end;
+	switch(direction) {
+		case UP:
+			dst = display.screen;
+			src = display.screen + distance*display.hres;
+			end = display.screen + display.vres*display.hres;
+				
+			while (src <= end) {
+				*dst = *src;
+				*src = 0;
+				dst++;
+				src++;
+			}
+			break;
+		case DOWN:
+			dst = display.screen + display.vres*display.hres;
+			src = dst - distance*display.hres;
+			end = display.screen;
+				
+			while (src >= end) {
+				*dst = *src;
+				*src = 0;
+				dst--;
+				src--;
+			}
+			break;
+		case LEFT:
+			//needs to be implimented
+			break;
+		case RIGHT:
+			//needs to be implimented
+			break;
+	}
+}
 
 /* very simple bitmap placeing function, bitmap must be full screen and
  * called bitmap, this will be expanded.
@@ -603,6 +642,7 @@ void TVout::fs_bitmap() {
 void TVout::select_font(uint8_t f) {
 	font = f;
 }
+
 /*
  * print an 8x8 char c at x,y
  * x must be a multiple of 8
@@ -709,19 +749,48 @@ void TVout::print_str(uint8_t x, uint8_t y, char *str) {
 	}
 }
 
-/* Simple tone generation
- * Takes the frequency and duration in ms
- * courtesy of nootropic on arduino.cc forums
- */
-void TVout::tone(unsigned int frequency, unsigned int duration_ms) {
-	toneHalfWavelengthISRCount = ((1000000 / frequency) / 2) / 64;
-	remainingISRs = duration_ms * (1000.0 / 64.0);
-	remainingHalfWavelengthISRCount = toneHalfWavelengthISRCount;
+void TVout::write(uint8_t c) {
+	switch(c) {
+		case '\0':			//null
+			break;
+		case '\n':			//line feed
+			cursor_x = 0;
+			inc_txtline();
+			break;
+		case 8:				//backspace
+			cursor_x -= font;
+			print_char(cursor_x,cursor_y,' ');
+			break;
+		case 13:			//carriage return !?!?!?!VT!?!??!?!
+			cursor_x = 0;
+			break;
+		case 14:			//form feed new page(clear screen)
+			clear_screen();
+			break;
+		default:
+			if (cursor_x >= (display.hres*8 - font)) {
+				cursor_x = 0;
+				inc_txtline();
+				print_char(cursor_x,cursor_y,c);
+			}
+			else
+				print_char(cursor_x,cursor_y,c);
+			cursor_x += font;
+	}
+}
+
+void TVout::inc_txtline() {
+	if (cursor_y >= (display.vres - 8))
+		shift(8,UP);
+	else
+		cursor_y += 8;
 }
 
 void TVout::render_setup(uint8_t mode) {
+
+	screen = display.screen;
 	clear_screen();
-	font = _8X8;
+	font = _5X7;
 	// device specific settings changes must also be made in asm_macros.h
 	
 	_VID_DDR |= _BV(_VID_PIN);
@@ -752,9 +821,9 @@ void TVout::render_setup(uint8_t mode) {
 		ICR1 = _NTSC_CYCLES_SCANLINE;
 		OCR1A = _CYCLES_HORZ_SYNC;
 	}
-	TIMSK1 = _BV(TOIE1);
 	display.scanLine = display.lines_frame+1;
 	line_handler = &vsync_line;
+	TIMSK1 = _BV(TOIE1);
 	sei();
 }
 
@@ -770,7 +839,7 @@ static void inline sp(uint8_t x, uint8_t y, char c) {
 }
 
 // Inline version of set_pixel that does perform a bounds check
-// Added by Andy Cook 2010
+// Added by Andy Crook 2010
 static void inline sp_safe(unsigned char x, unsigned char y, char c, char d) {
 	if (d==0) { // if d is zero then just do without any bounds check
 		if (c==1)

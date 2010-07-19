@@ -53,6 +53,7 @@ Audio connected to arduino pin 10, hard coded for now
 #define TVOUT_H
 
 #include <stdint.h>
+#include "utils/Print.h"
 
 // macros for readability when selecting mode.
 #define _PAL					1
@@ -61,6 +62,15 @@ Audio connected to arduino pin 10, hard coded for now
 #define _3X5					4
 #define	_5X7					6
 #define _8X8					8
+
+#define WHITE					1
+#define BLACK					0
+#define INVERT					2
+
+#define UP						0
+#define DOWN					1
+#define LEFT					2
+#define RIGHT					3
 
 // combatibility macros
 #define start_render(mode)			begin(mode)
@@ -77,21 +87,28 @@ Audio connected to arduino pin 10, hard coded for now
 /*
 TVout.cpp contains a brief expenation of each function.
 */
-class TVout {
+class TVout : public Print {
 public:
+	uint8_t * screen;
+	
 	char begin(uint8_t mode);
 	char begin(uint8_t mode, uint8_t x, uint8_t y);
-	void pause();
-	void resume();
-	void fill(uint8_t color);
+	
+	//accessor functions
 	unsigned char hres();
 	unsigned char vres();
 	char char_line();
+	
+	//flow control functions
 	void delay(unsigned int x);
+	void pause();
+	void resume();
 	
 	//basic rendering functions
 	void set_pixel(uint8_t x, uint8_t y, char c);
 	unsigned char get_pixel(uint8_t x, uint8_t y);
+	void fill(uint8_t color);
+	void shift(uint8_t distance, uint8_t direction);
 	void draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char c);
 	void draw_box(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char c, char d, char e, char f); 
 	void draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char d, char h);
@@ -101,9 +118,22 @@ public:
 	void select_font(uint8_t f);
 	void print_char(uint8_t x, uint8_t y, char c);
 	void print_str(uint8_t x, uint8_t y, char *str);
-	void tone(unsigned int frequency, unsigned int duration_ms);
+	virtual void write(uint8_t c);
+	using Print::write;
+	
+	//serial functions
+	void serial_begin(long baud);
+	void serial_end();
+	uint8_t serial_available();
+	int serial_read();
+	void serial_flush();
+	
 private:
 	uint8_t font;
+	uint8_t cursor_x;
+	uint8_t cursor_y;
+	
+	void inc_txtline();
 	void render_setup(uint8_t mode);
 };
 

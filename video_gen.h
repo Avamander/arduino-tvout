@@ -42,20 +42,22 @@ typedef struct {
 
 extern TVout_vid display;
 
-//tone generation properties
-extern volatile unsigned int remainingISRs;
-extern uint8_t toneHalfWavelengthISRCount;
-extern volatile char remainingHalfWavelengthISRCount;
+extern unsigned char sbuffer[];
+extern uint8_t head;
+extern uint8_t tail;
 
 extern void (*render_line)();
 extern void (*line_handler)();
+extern void (*fastpoll)();
 
 void blank_line();
 void active_line();
 void vsync_line();
+void empty();
 
 // 6cycles functions
 void render_line6c();
 void render_line5c();
+void render_line4c();
 static void inline wait_until(uint8_t time);
 #endif
