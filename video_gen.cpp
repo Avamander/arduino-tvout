@@ -27,40 +27,19 @@
 #include <avr/io.h>
 
 #include "video_gen.h"
-#include "video_properties.h"
-#include "asm_macros.h"
-#include "hardware_setup.h"
+#include "spec/video_properties.h"
+#include "spec/asm_macros.h"
+#include "spec/hardware_setup.h"
 
 int renderLine;
 TVout_vid display;
 void (*render_line)();
 void (*line_handler)();
-
-// sound properties
-volatile unsigned int remainingISRs;
-uint8_t toneHalfWavelengthISRCount;
-volatile char remainingHalfWavelengthISRCount;
+void (*fastpoll)() = &empty;
 
 // render a line
 ISR(TIMER1_OVF_vect) {
-	// tone generation courtesy of nootropic on arduino.cc forum
-	if (toneHalfWavelengthISRCount > 0) {
-		remainingISRs--;
-		remainingHalfWavelengthISRCount--;
-		if (remainingISRs > 0) {
-			if (remainingHalfWavelengthISRCount == 0) {
-				// flip pin that is generating square wave
-				PORTB ^= 0x04; // Arduino pin 10
-				remainingHalfWavelengthISRCount = toneHalfWavelengthISRCount;
-			}
-		}
-		else {
-			// done generating tone.
-			PORTB &= ~0x04; // set low
-			toneHalfWavelengthISRCount = 0;
-		}
-	}
-	
+	fastpoll();
 	line_handler();
 }
 
@@ -104,10 +83,13 @@ void vsync_line() {
 	display.scanLine++;
 }
 
+void empty() {
+}
+
 static void inline wait_until(uint8_t time) {
 	__asm__ __volatile__ (
-			"sub	%[time], %[tcnt1l]\n\t"
 			"subi	%[time], 10\n"
+			"sub	%[time], %[tcnt1l]\n\t"
 		"100:\n\t"
 			"subi	%[time], 3\n\t"
 			"brcc	100b\n\t"
@@ -220,6 +202,53 @@ void render_line5c() {
 		"svprt	%[port]\n\t"
 		"bst	r16,1\n\t"
 		"o1bs	%[port]\n\t"
+		:
+		: [port] "i" (_SFR_IO_ADDR(_VID_PORT)),
+		"x" (display.screen),
+		"y" (renderLine),
+		[hres] "d" (display.hres)
+		: "r16" // try to remove this clobber later...
+	);
+}
+
+void render_line4c() {
+	__asm__ __volatile__ (
+		"ADD	r26,r28\n\t"
+		"ADC	r27,r29\n\t"
+		
+		"rjmp	enter4\n"
+	"loop4:\n\t"
+		"lsl	__tmp_reg__\n\t"			//8
+		"out	%[port],__tmp_reg__\n\t"
+	"enter4:\n\t"
+		"LD		__tmp_reg__,X+\n\t"			//1
+		"delay1\n\t"
+		"out	%[port],__tmp_reg__\n\t"
+		"delay2\n\t"						//2
+		"lsl	__tmp_reg__\n\t"
+		"out	%[port],__tmp_reg__\n\t"
+		"delay2\n\t"						//3
+		"lsl	__tmp_reg__\n\t"
+		"out	%[port],__tmp_reg__\n\t"
+		"delay2\n\t"						//4
+		"lsl	__tmp_reg__\n\t"
+		"out	%[port],__tmp_reg__\n\t"
+		"delay2\n\t"						//5
+		"lsl	__tmp_reg__\n\t"
+		"out	%[port],__tmp_reg__\n\t"
+		"delay2\n\t"						//6
+		"lsl	__tmp_reg__\n\t"
+		"out	%[port],__tmp_reg__\n\t"
+		"delay1\n\t"						//7
+		"lsl	__tmp_reg__\n\t"
+		"dec	%[hres]\n\t"
+		"out	%[port],__tmp_reg__\n\t"
+		"brne	loop4\n\t"					//go too loop4
+		"delay1\n\t"						//8
+		"lsl	__tmp_reg__\n\t"
+		"out	%[port],__tmp_reg__\n\t"
+		"delay3\n\t"
+		"cbi	%[port],7\n\t"
 		:
 		: [port] "i" (_SFR_IO_ADDR(_VID_PORT)),
 		"x" (display.screen),

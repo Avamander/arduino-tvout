@@ -6,7 +6,7 @@ unsigned char x,y;
 void setup()  {
   x=0;
   y=0;
-  TV.start_render(_NTSC);
+  TV.start_render(_NTSC);	//for devices with only 1k sram(m168) use TV.begin(_NTSC,128,56)
 }
 
 void loop() {

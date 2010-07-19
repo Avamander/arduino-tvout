@@ -1,4 +1,4 @@
-R6 (June 2010):
+R6 (June 2010) (Currently Beta at 5.9):
 	-transitioned API to a more be more "arduino like", macros were included
 	 maintain compatibility, with the exception of the start_render(mode,x,y) which
 	 has no such compatibility layer.
