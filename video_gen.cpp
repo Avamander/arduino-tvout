@@ -257,3 +257,111 @@ void render_line4c() {
 		: "r16" // try to remove this clobber later...
 	);
 }
+
+// only 16mhz right now!!!
+void render_line3c() {
+
+	__asm__ __volatile__ (
+	".macro byteshift\n\t"
+		"LD		__tmp_reg__,X+\n\t"
+		"out	%[port],__tmp_reg__\n\t"	//0
+		"nop\n\t"
+		"lsl	__tmp_reg__\n\t"
+		"out	%[port],__tmp_reg__\n\t"	//1
+		"nop\n\t"
+		"lsl	__tmp_reg__\n\t"
+		"out	%[port],__tmp_reg__\n\t"	//2
+		"nop\n\t"
+		"lsl	__tmp_reg__\n\t"
+		"out	%[port],__tmp_reg__\n\t"	//3
+		"nop\n\t"
+		"lsl	__tmp_reg__\n\t"
+		"out	%[port],__tmp_reg__\n\t"	//4
+		"nop\n\t"
+		"lsl	__tmp_reg__\n\t"
+		"out	%[port],__tmp_reg__\n\t"	//5
+		"nop\n\t"
+		"lsl	__tmp_reg__\n\t"
+		"out	%[port],__tmp_reg__\n\t"	//6
+		"nop\n\t"
+		"lsl	__tmp_reg__\n\t"
+		"out	%[port],__tmp_reg__\n\t"	//7
+	".endm\n\t"
+	
+		"ADD	r26,r28\n\t"
+		"ADC	r27,r29\n\t"
+		
+		"cpi	%[hres],30\n\t"		//615
+		"breq	skip0\n\t"
+		"cpi	%[hres],29\n\t"
+		"breq	jumpto1\n\t"
+		"cpi	%[hres],28\n\t"
+		"breq	jumpto2\n\t"
+		"cpi	%[hres],27\n\t"
+		"breq	jumpto3\n\t"
+		"cpi	%[hres],26\n\t"
+		"breq	jumpto4\n\t"
+		"cpi	%[hres],25\n\t"
+		"breq	jumpto5\n\t"
+		"cpi	%[hres],24\n\t"
+		"breq	jumpto6\n\t"
+	"jumpto1:\n\t"
+		"rjmp	skip1\n\t"
+	"jumpto2:\n\t"
+		"rjmp	skip2\n\t"
+	"jumpto3:\n\t"
+		"rjmp	skip3\n\t"
+	"jumpto4:\n\t"
+		"rjmp	skip4\n\t"
+	"jumpto5:\n\t"
+		"rjmp	skip5\n\t"
+	"jumpto6:\n\t"
+		"rjmp	skip6\n\t"
+	"skip0:\n\t"
+		"byteshift\n\t"	//1		\\643
+	"skip1:\n\t"
+		"byteshift\n\t"	//2
+	"skip2:\n\t"
+		"byteshift\n\t"	//3
+	"skip3:\n\t"
+		"byteshift\n\t"	//4
+	"skip4:\n\t"
+		"byteshift\n\t"	//5
+	"skip5:\n\t"
+		"byteshift\n\t"	//6
+	"skip6:\n\t"
+		"byteshift\n\t"	//7
+		"byteshift\n\t"	//8
+		"byteshift\n\t"	//9
+		"byteshift\n\t"	//10
+		"byteshift\n\t"	//11
+		"byteshift\n\t"	//12
+		"byteshift\n\t"	//13
+		"byteshift\n\t"	//14
+		"byteshift\n\t"	//15
+		"byteshift\n\t"	//16
+		"byteshift\n\t"	//17
+		"byteshift\n\t"	//18
+		"byteshift\n\t"	//19
+		"byteshift\n\t"	//20
+		"byteshift\n\t"	//21
+		"byteshift\n\t"	//22
+		"byteshift\n\t"	//23
+		"byteshift\n\t"	//24
+		"byteshift\n\t"	//25
+		"byteshift\n\t"	//26
+		"byteshift\n\t"	//27
+		"byteshift\n\t"	//28
+		"byteshift\n\t"	//29
+		"byteshift\n\t"	//30
+		
+		"delay2\n\t"
+		"cbi	%[port],7\n\t"
+		:
+		: [port] "i" (_SFR_IO_ADDR(_VID_PORT)),
+		"x" (display.screen),
+		"y" (renderLine),
+		[hres] "d" (display.hres)
+		: "r16" // try to remove this clobber later...
+	);
+}

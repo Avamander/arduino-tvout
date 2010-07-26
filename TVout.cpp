@@ -88,7 +88,7 @@ char TVout::begin(uint8_t mode) {
 
 /* call this to start video output with a specified resolution.
  * mode selects NTSC or PAL
- * x is the horizontal resolution MUST BE DIVISABLE BY 8 (max 248)
+ * x is the horizontal resolution MUST BE DIVISABLE BY 8 (max 240)
  * y is the vertical resolution (max 255)
  */
 char TVout::begin(uint8_t mode, uint8_t x, uint8_t y) {
@@ -120,10 +120,32 @@ char TVout::begin(uint8_t mode, uint8_t x, uint8_t y) {
 		render_line = &render_line5c;
 	else if (display.hres >= 19 && display.hres < 24)
 		render_line = &render_line4c;
-	//else if (display.hres >= 24 && display.hres < 25)		//not written yet.
-		//render_line = &render_line3c;
+	else if (display.hres >= 24 && display.hres < 31)		//not written yet.
+		render_line = &render_line3c;
 	else
 		return 5;
+		
+	/*
+	uint8_t cycles = _CYCLES_PER_US;
+	while((_CYCLES_PER_US / cycles * 45 / 8) >= display.hres)
+		cycles--;
+	switch(cycles) {
+		case 6:
+			render_line = &render_line6c;
+			break;
+		case 5:
+			render_line = &render_line5c;
+			break;
+		case 4:
+			render_line = &render_line4c;
+			break;
+		case 3:
+			//render_line = &render_line3c;
+			break;
+		default:
+			return 5;
+	}
+	*/
 		
 	cursor_x = 0;
 	cursor_y = 0;
@@ -232,7 +254,9 @@ void TVout::set_pixel(uint8_t x, uint8_t y, char c) {
 unsigned char TVout::get_pixel(uint8_t x, uint8_t y) {
 	if (x >= display.hres*8 || y >= display.vres)
 		return 0;
-	return ((display.screen[(x/8) +(y*display.hres)] >> ((~x) & 7)) &0x01);
+	if (display.screen[x/8+y*display.hres] & (0x80 >>(x&7)))
+		return 1;
+	return 0;
 }
 
 /* draw a line
