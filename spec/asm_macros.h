@@ -128,13 +128,6 @@ __asm__ __volatile__ (
 
 // common output macros, specific output macros at top of file
 __asm__ __volatile__ (
-	// output 1 bit port unsafe, highest order bit on port.
-	// lowest would require modifications to how the frame buffer
-	// is mapped to memory
-	".macro o1bu p\n\t"
-		"lsl	__tmp_reg__\n\t"
-		"out	\\p,__tmp_reg__\n"
-	".endm\n"
 	
 	// save port 16 and clear the video bit
 	".macro svprt p\n\t"
@@ -148,29 +141,4 @@ __asm__ __volatile__ (
 		"out	\\p,r16\n"
 	".endm\n"
 ); // end of output macros
-
-//byte shift macros
-__asm__ __volatile__ (
-
-	// shift a byte out the highest order pin of the given port
-	// at a rate of 3cycles per bit.
-	".macro bs3c port\n\t"
-		"LD		__tmp_reg__,X+\n\t"			//1
-		"out	\\port\n\t"
-		"delay1\n\t"						//2
-		"o1bu	\\port\n\t"
-		"delay1\n\t"						//3
-		"o1bu	\\port\n\t"
-		"delay1\n\t"						//4
-		"o1bu	\\port\n\t"
-		"delay1\n\t"						//5
-		"o1bu	\\port\n\t"
-		"delay1\n\t"						//6
-		"o1bu	\\port\n\t"
-		"delay1\n\t"						//7
-		"o1bu	\\port\n\t"
-		"delay1\n\t"						//8
-		"o1bu	\\port\n"
-	".endm\n"
-);
 #endif
