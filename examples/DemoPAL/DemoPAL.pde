@@ -6,7 +6,8 @@ unsigned char x,y;
 void setup()  {
   x=0;
   y=0;
-  TV.start_render(_PAL);	//for devices with only 1k sram(m168) use TV.begin(_PAL,128,56)
+  TV.begin(PAL);	//for devices with only 1k sram(m168) use TV.begin(_NTSC,128,56)
+  TV.select_font(_5X7);
 }
 
 void loop() {
@@ -16,29 +17,28 @@ void loop() {
   for (char i = 32; i < 127; i++) {
     TV.print_char(x*6,y*8,i);
     x++;
-    if (x > TV.char_line()) {
+    if (x >= TV.char_line()) {
       y++;
       x=0;
     }
   }
-  TV.delay_frame(50);
+  TV.delay(50);
   TV.clear_screen();
-  TV.print_str(0,0,"fill screen pixel");
-  TV.print_str(0,8,"by pixel");
-  TV.delay_frame(50);
+  TV.println("Fill the Screen\nPixel by Pixel");
+  TV.delay(50);
   TV.clear_screen();
-  for(x=0;x<TV.horz_res();x++){
-    for(y=0;y<TV.vert_res();y++){
+  for(x=0;x<TV.hres();x++){
+    for(y=0;y<TV.vres();y++){
       TV.set_pixel(x,y,1);
     }
   }
-  TV.delay_frame(50);
+  TV.delay(50);
   TV.clear_screen();
-  TV.print_str(0,0,"draw some lines");
-  TV.delay_frame(50);
-  for(y=0;y<TV.vert_res();y++){
-    delay(10);
+  TV.print("Draw some lines");
+  TV.delay(50);
+  x = TV.hres() - 1;
+  for(y=0;y<TV.vres();y++){
     TV.draw_line(0,y,x-y,y,2);
   }
-  TV.delay_frame(50);
+  TV.delay(50);
 }

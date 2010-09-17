@@ -37,6 +37,74 @@ void (*render_line)();
 void (*line_handler)();
 void (*fastpoll)() = &empty;
 
+// sound properties
+volatile long remainingToneVsyncs;
+
+void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {
+
+	display.screen = scrnptr;
+	display.hres = x;
+	display.vres = y;
+	
+	if (mode)
+		display.vscale_const = _PAL_LINE_DISPLAY/display.vres - 1;
+	else
+		display.vscale_const = _NTSC_LINE_DISPLAY/display.vres - 1;
+	display.vscale = display.vscale_const;
+	
+	//selects the widest render method that fits in 46us
+	//as of 9/16/10 rendermode 3 will not work for resolutions lower than
+	//192(display.hres lower than 24)
+	switch((46*_CYCLES_PER_US)/(display.hres*8)) {
+		case 6:
+			render_line = &render_line6c;
+			break;
+		case 5:
+			render_line = &render_line5c;
+			break;
+		case 4:
+			render_line = &render_line4c;
+			break;
+		case 3:
+			render_line = &render_line3c;
+			break;
+	}
+	
+
+	DDR_VID |= _BV(VID_PIN);
+	DDR_SYNC |= _BV(SYNC_PIN);
+	PORT_VID &= ~_BV(VID_PIN);
+	PORT_SYNC |= _BV(SYNC_PIN);
+	DDR_SND |= _BV(SND_PIN);	// for tone generation.
+	
+	// inverted fast pwm mode on timer 1
+	TCCR1A = _BV(COM1A1) | _BV(COM1A0) | _BV(WGM11);
+	TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10);
+	
+	if (mode) {
+		display.start_render = _PAL_LINE_MID - ((display.vres * (display.vscale+1))/2);
+		display.stop_render = display.start_render + (display.vres * (display.vscale+1));
+		display.output_delay = _PAL_CYCLES_OUTPUT_START;
+		display.vsync_end = _PAL_LINE_STOP_VSYNC;
+		display.lines_frame = _PAL_LINE_FRAME;
+		ICR1 = _PAL_CYCLES_SCANLINE;
+		OCR1A = _CYCLES_HORZ_SYNC;
+		}
+	else {
+		display.start_render = _NTSC_LINE_MID - ((display.vres * (display.vscale+1))/2) + 8;
+		display.stop_render = display.start_render + (display.vres * (display.vscale+1));
+		display.output_delay = _NTSC_CYCLES_OUTPUT_START;
+		display.vsync_end = _NTSC_LINE_STOP_VSYNC;
+		display.lines_frame = _NTSC_LINE_FRAME;
+		ICR1 = _NTSC_CYCLES_SCANLINE;
+		OCR1A = _CYCLES_HORZ_SYNC;
+	}
+	display.scanLine = display.lines_frame+1;
+	line_handler = &vsync_line;
+	TIMSK1 = _BV(TOIE1);
+	sei();
+}
+
 // render a line
 ISR(TIMER1_OVF_vect) {
 	fastpoll();
@@ -75,6 +143,20 @@ void vsync_line() {
 	if (display.scanLine >= display.lines_frame) {
 		OCR1A = _CYCLES_VIRT_SYNC;
 		display.scanLine = 0;
+
+		if (remainingToneVsyncs != 0)
+		{
+			if (remainingToneVsyncs > 0)
+			{
+				remainingToneVsyncs--;
+			}
+
+		} else
+		{
+			TCCR2B = 0; //stop the tone
+ 			PORTB &= ~(_BV(3)); //set pin 11 to 0
+		}
+
 	}
 	else if (display.scanLine == display.vsync_end) {
 		OCR1A = _CYCLES_HORZ_SYNC;
@@ -82,6 +164,7 @@ void vsync_line() {
 	}
 	display.scanLine++;
 }
+
 
 void empty() {
 }
@@ -148,10 +231,10 @@ void render_line6c() {
 		"o1bs	%[port]\n"
 		
 		"svprt	%[port]\n\t"
-		"bst	r16,1\n\t"
+		BST_HWS
 		"o1bs	%[port]\n\t"
 		:
-		: [port] "i" (_SFR_IO_ADDR(_VID_PORT)),
+		: [port] "i" (_SFR_IO_ADDR(PORT_VID)),
 		"x" (display.screen),
 		"y" (renderLine),
 		[hres] "d" (display.hres)
@@ -200,10 +283,10 @@ void render_line5c() {
 		"o1bs	%[port]\n"
 		
 		"svprt	%[port]\n\t"
-		"bst	r16,1\n\t"
+		BST_HWS
 		"o1bs	%[port]\n\t"
 		:
-		: [port] "i" (_SFR_IO_ADDR(_VID_PORT)),
+		: [port] "i" (_SFR_IO_ADDR(PORT_VID)),
 		"x" (display.screen),
 		"y" (renderLine),
 		[hres] "d" (display.hres)
@@ -250,7 +333,7 @@ void render_line4c() {
 		"delay3\n\t"
 		"cbi	%[port],7\n\t"
 		:
-		: [port] "i" (_SFR_IO_ADDR(_VID_PORT)),
+		: [port] "i" (_SFR_IO_ADDR(PORT_VID)),
 		"x" (display.screen),
 		"y" (renderLine),
 		[hres] "d" (display.hres)
@@ -358,7 +441,7 @@ void render_line3c() {
 		"delay2\n\t"
 		"cbi	%[port],7\n\t"
 		:
-		: [port] "i" (_SFR_IO_ADDR(_VID_PORT)),
+		: [port] "i" (_SFR_IO_ADDR(PORT_VID)),
 		"x" (display.screen),
 		"y" (renderLine),
 		[hres] "d" (display.hres)

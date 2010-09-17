@@ -50,10 +50,15 @@ extern void (*render_line)();
 extern void (*line_handler)();
 extern void (*fastpoll)();
 
+void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr);
+
 void blank_line();
 void active_line();
 void vsync_line();
 void empty();
+
+//tone generation properties
+extern volatile long remainingToneVsyncs;
 
 // 6cycles functions
 void render_line6c();

@@ -58,8 +58,6 @@
 
 #include "TVout.h"
 #include "video_gen.h"
-#include "spec/video_properties.h"
-#include "spec/hardware_setup.h"
 
 // bad style I know but i dont feel like doing it the correct way.
 PROGMEM const unsigned char ascii3x5[] ={
@@ -92,82 +90,23 @@ char TVout::begin(uint8_t mode) {
  * y is the vertical resolution (max 255)
  */
 char TVout::begin(uint8_t mode, uint8_t x, uint8_t y) {
-
-	display.hres = x/8;
-	display.vres = y;
-	if (mode)
-		display.vscale_const = _PAL_LINE_DISPLAY/display.vres - 1;
-	else
-		display.vscale_const = _NTSC_LINE_DISPLAY/display.vres - 1;
-	display.vscale = display.vscale_const;
 	
-
-	if ( !(display.hres & 0xF8))
+	// check if x is divisable by 8
+	if ( !(x & 0xF8))
 		return 1;
-	if ( display.hres > 248 )
-		return 2;
-	if (!mode && y > _NTSC_LINE_DISPLAY)
-		return 3;
+	x = x/8;
 		
-	display.screen = (unsigned char*)malloc(display.hres * display.vres * sizeof(unsigned char));
-	if (display.screen == NULL)
+	screen = (unsigned char*)malloc(x * y * sizeof(unsigned char));
+	if (screen == NULL)
 		return 4;
-		
-	//this needs to be rewritten for compatibility with cpu freq other than 16mhz
-	if ( display.hres >= 13 && display.hres < 16 )
-		render_line = &render_line6c;
-	else if ( display.hres >= 16 && display.hres < 19)
-		render_line = &render_line5c;
-	else if (display.hres >= 19 && display.hres < 24)
-		render_line = &render_line4c;
-	else if (display.hres >= 24 && display.hres < 31)		//not written yet.
-		render_line = &render_line3c;
-	else
-		return 5;
-		
-	/*
-	uint8_t cycles = _CYCLES_PER_US;
-	while((_CYCLES_PER_US / cycles * 45 / 8) >= display.hres)
-		cycles--;
-	switch(cycles) {
-		case 6:
-			render_line = &render_line6c;
-			break;
-		case 5:
-			render_line = &render_line5c;
-			break;
-		case 4:
-			render_line = &render_line4c;
-			break;
-		case 3:
-			//render_line = &render_line3c;
-			break;
-		default:
-			return 5;
-	}
-	*/
 		
 	cursor_x = 0;
 	cursor_y = 0;
 	
-	render_setup(mode);
+	font = _5X7;
+	render_setup(mode,x,y,screen);
+	clear_screen();
 	return 0;
-}
-
-/* pauses rendering but keeps outputting a HSYNC this gives all CPU time to
- * user code
-*/
-void TVout::pause() {
-	TIMSK1 &= ~_BV(TOIE1);
-	OCR1A = _CYCLES_HORZ_SYNC;
-}
-
-/* Resume rendering the screen
-*/
-void TVout::resume() {
-	display.scanLine = display.lines_frame+1;
-	line_handler = &vsync_line;
-	TIMSK1 = _BV(TOIE1);
 }
 
 /* Clears the screen
@@ -216,25 +155,11 @@ char TVout::char_line() {
  * for PAL 1 second = 50 frames
  */
 void TVout::delay(unsigned int x) {
-//	if (TIMSK1 & _BV(TOIE1)) {
-		while (x) {
-			while (display.scanLine != display.stop_render+1);
-			while (display.scanLine == display.stop_render+1);
-			x--;
-		}
-//	}
-//	else {
-//		int lines;
-//		while (x) {
-//			lines = display.lines_frame;
-//			while (lines) {
-//				while (TCNT1 < _CYCLES_HORZ_SYNC);
-//				while (TCNT1 > _CYCLES_HORZ_SYNC);
-//				lines--;
-//			}
-//			x--;
-//		}
-//	}
+	while (x) {
+		while (display.scanLine != display.stop_render+1);
+		while (display.scanLine == display.stop_render+1);
+		x--;
+	}
 }
 
 /* plot one point 
@@ -270,7 +195,7 @@ void TVout::draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char c) {
 	int e;
 	signed int dx,dy,j, temp;
 	signed char s1,s2, xchange;
-signed int x,y;
+	signed int x,y;
 
 	x = x0;
 	y = y0;
@@ -810,47 +735,6 @@ void TVout::inc_txtline() {
 		cursor_y += 8;
 }
 
-void TVout::render_setup(uint8_t mode) {
-
-	screen = display.screen;
-	clear_screen();
-	font = _5X7;
-	// device specific settings changes must also be made in asm_macros.h
-	
-	_VID_DDR |= _BV(_VID_PIN);
-	_SYNC_DDR |= _BV(_SYNC_PIN);
-	_VID_PORT &= ~_BV(_VID_PIN);
-	_SYNC_PORT |= _BV(_SYNC_PIN);
-	DDRB |= 0x04;	// for tone generation.
-	
-	// inverted fast pwm mode on timer 1
-	TCCR1A = _BV(COM1A1) | _BV(COM1A0) | _BV(WGM11);
-	TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10);
-	
-	if (mode) {
-		display.start_render = _PAL_LINE_MID - ((display.vres * (display.vscale+1))/2);
-		display.stop_render = display.start_render + (display.vres * (display.vscale+1));
-		display.output_delay = _PAL_CYCLES_OUTPUT_START;
-		display.vsync_end = _PAL_LINE_STOP_VSYNC;
-		display.lines_frame = _PAL_LINE_FRAME;
-		ICR1 = _PAL_CYCLES_SCANLINE;
-		OCR1A = _CYCLES_HORZ_SYNC;
-		}
-	else {
-		display.start_render = _NTSC_LINE_MID - ((display.vres * (display.vscale+1))/2) + 8;
-		display.stop_render = display.start_render + (display.vres * (display.vscale+1));
-		display.output_delay = _NTSC_CYCLES_OUTPUT_START;
-		display.vsync_end = _NTSC_LINE_STOP_VSYNC;
-		display.lines_frame = _NTSC_LINE_FRAME;
-		ICR1 = _NTSC_CYCLES_SCANLINE;
-		OCR1A = _CYCLES_HORZ_SYNC;
-	}
-	display.scanLine = display.lines_frame+1;
-	line_handler = &vsync_line;
-	TIMSK1 = _BV(TOIE1);
-	sei();
-}
-
 /* Inline version of set_pixel that does not perform a bounds check
 */
 static void inline sp(uint8_t x, uint8_t y, char c) {
@@ -884,3 +768,102 @@ static void inline sp_safe(unsigned char x, unsigned char y, char c, char d) {
 		}
 	}
 }
+
+void TVout::tone(unsigned int frequency)
+{
+	tone(frequency, 0);
+}
+
+/* Simple tone generation
+ * Takes the frequency and duration in ms
+ * courtesy of adamwwolf
+ */
+void TVout::tone(unsigned int frequency, unsigned long duration_ms) {
+
+  if (frequency == 0)
+  {
+    return;
+  }
+
+
+#define TIMER 2
+//this is init code
+        TCCR2A = 0;
+        TCCR2B = 0;
+	TCCR2A |= _BV(WGM21);
+	TCCR2B |= _BV(CS20);
+//end init code
+
+//most of this is taken from Tone.cpp from Arduino
+
+  uint8_t prescalarbits = 0b001;
+  uint32_t ocr = 0;
+  
+
+    DDRB |= _BV(3); //set pb3 (digital pin 11) to output
+
+    //we are using an 8 bit timer, scan through prescalars to find the best fit
+      ocr = F_CPU / frequency / 2 - 1;
+      prescalarbits = 0b001;  // ck/1: same for both timers
+      if (ocr > 255)
+      {
+        ocr = F_CPU / frequency / 2 / 8 - 1;
+        prescalarbits = 0b010;  // ck/8: same for both timers
+
+        if (ocr > 255)
+        {
+          ocr = F_CPU / frequency / 2 / 32 - 1;
+          prescalarbits = 0b011;
+        }
+
+        if (ocr > 255)
+        {
+          ocr = F_CPU / frequency / 2 / 64 - 1;
+          prescalarbits = TIMER == 0 ? 0b011 : 0b100;
+
+          if (ocr > 255)
+          {
+            ocr = F_CPU / frequency / 2 / 128 - 1;
+            prescalarbits = 0b101;
+          }
+
+          if (ocr > 255)
+          {
+            ocr = F_CPU / frequency / 2 / 256 - 1;
+            prescalarbits = TIMER == 0 ? 0b100 : 0b110;
+            if (ocr > 255)
+            {
+              // can't do any better than /1024
+              ocr = F_CPU / frequency / 2 / 1024 - 1;
+              prescalarbits = TIMER == 0 ? 0b101 : 0b111;
+            }
+          }
+        }
+
+      }
+      TCCR2B = prescalarbits;
+
+	if (duration_ms > 0)
+	{
+		remainingToneVsyncs = duration_ms*60/1000; //60 here represents the framerate
+	} else
+	{
+		remainingToneVsyncs = -1;
+	}
+ 
+  
+      // Set the OCR for the given timer,
+      OCR2A = ocr;
+      //set it to toggle the pin by itself
+      TCCR2A &= ~(_BV(COM2A1)); //set COM2A1 to 0
+      TCCR2A |= _BV(COM2A0);
+      
+
+}
+
+void TVout::noTone() {
+  TCCR2B = 0;
+  PORTB &= ~(_BV(3)); //set pin 11 to 0
+}
+
+
