@@ -53,9 +53,11 @@ Audio connected to arduino pin 10, hard coded for now
 #define TVOUT_H
 
 #include <stdint.h>
-#include "utils/Print.h"
+#include "Print.h"
 
 // macros for readability when selecting mode.
+#define PAL						1
+#define	NTSC					0
 #define _PAL					1
 #define _NTSC					0
 
@@ -101,8 +103,6 @@ public:
 	
 	//flow control functions
 	void delay(unsigned int x);
-	void pause();
-	void resume();
 	
 	//basic rendering functions
 	void set_pixel(uint8_t x, uint8_t y, char c);
@@ -127,6 +127,12 @@ public:
 	uint8_t serial_available();
 	int serial_read();
 	void serial_flush();
+
+	//tone functions
+	void tone(unsigned int frequency, unsigned long duration_ms);
+	void tone(unsigned int frequency);
+	void noTone();
+
 	
 private:
 	uint8_t font;
@@ -134,7 +140,6 @@ private:
 	uint8_t cursor_y;
 	
 	void inc_txtline();
-	void render_setup(uint8_t mode);
 };
 
 static void inline sp(unsigned char x, unsigned char y, char c);

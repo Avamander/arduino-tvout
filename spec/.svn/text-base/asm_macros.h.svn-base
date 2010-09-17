@@ -132,12 +132,12 @@ __asm__ __volatile__ (
 	// save port 16 and clear the video bit
 	".macro svprt p\n\t"
 		"in		r16,\\p\n\t"
-		ANDI_HWS
+		_ANDI_HWS
 	".endm\n"
 	
 	// ouput 1 bit port safe
 	".macro o1bs p\n\t"
-		BLD_HWS
+		_BLD_HWS
 		"out	\\p,r16\n"
 	".endm\n"
 ); // end of output macros

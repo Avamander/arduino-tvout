@@ -23,51 +23,109 @@
  OTHER DEALINGS IN THE SOFTWARE.
 */
 
+// sound is output on OC2A
+// sync output is on OC1A
+
+//ENABLE_FAST_OUTPUT chooses the highest bit of a port over the original output method
+//comment out this line to switch back to the original output pins.
+#define ENABLE_FAST_OUTPUT
+
 #ifndef HARDWARE_SETUP_H
 #define HARDWARE_SETUP_H
 
 // device specific settings.
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega1281__)
-#define _VID_PORT	PORTB
-#define	_VID_DDR	DDRB
-#define _VID_PIN	6
-#define _SYNC_PORT	PORTB
-#define _SYNC_DDR	DDRB
-#define	_SYNC_PIN	5
-#define _ANDI_HWS	"andi	r16,0xBF\n"
-#define _BLD_HWS	"bld	r16,6\n\t"
+#if defined(ENABLE_FAST_OUTPUT)
+#define PORT_VID	PORTA
+#define	DDR_VID		DDRA
+#define VID_PIN		7
+#define ANDI_HWS	"andi	r16,0x7F\n"
+#else
+//video
+#define PORT_VID	PORTB
+#define	DDR_VID		DDRB
+#define VID_PIN		6
+#define ANDI_HWS	"andi	r16,0xBF\n"
+#endif
+//sync
+#define PORT_SYNC	PORTB
+#define DDR_SYNC	DDRB
+#define	SYNC_PIN	5
+//sound
+#define PORT_SND	PORTB
+#define DDR_SND		DDRB
+#define	SND_PIN		4
 
 #elif defined(__AVR_ATmega644__) || defined(__AVR_ATmega644P__) || defined(__AVR_ATmega1284__) || defined(__AVR_ATmega1284P__)
-#define _VID_PORT	PORTD
-#define	_VID_DDR	DDRD
-#define _VID_PIN	4
-#define _SYNC_PORT	PORTD
-#define _SYNC_DDR	DDRD
-#define _SYNC_PIN	5
-#define _ANDI_HWS	"andi	r16,0xDF\n"
-#define _BLD_HWS	"bld	r16,4\n\t"
+//video
+#if defined(ENABLE_FAST_OUTPUT)
+#define PORT_VID	PORTA
+#define	DDR_VID		DDRA
+#define VID_PIN		7
+#define ANDI_HWS	"andi	r16,0x7F\n"
+#else
+#define PORT_VID	PORTD
+#define	DDR_VID		DDRD
+#define VID_PIN		4
+#define ANDI_HWS	"andi	r16,0xDF\n"
+#endif
+//sync
+#define PORT_SYNC	PORTD
+#define DDR_SYNC	DDRD
+#define SYNC_PIN	5
+//sound
+#define PORT_SND	PORTD
+#define DDR_SND		DDRD
+#define	SND_PIN		7
 
-/*
 #elif defined(__AVR_ATmega8__) || defined(__AVR_ATmega88__) || defined(__AVR_ATmega168P__) || defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328__)
-#define _VID_PORT	PORTB
-#define	_VID_DDR	DDRB
-#define	_VID_PIN	0
-#define _SYNC_PORT	PORTB
-#define _SYNC_DDR	DDRB
-#define _SYNC_PIN	1
-#define _ANDI_HWS	"andi	r16,0xFD\n"
-#define _BLD_HWS	"bld	r16,0\n\t"
-*/
+//video
+#if defined(ENABLE_FAST_OUTPUT)
+#define PORT_VID	PORTD
+#define	DDR_VID		DDRD
+#define	VID_PIN		7
+#define ANDI_HWS	"andi	r16,0x7F\n"
+#else
+#define PORT_VID	PORTB
+#define	DDR_VID		DDRB
+#define	VID_PIN		0
+#define ANDI_HWS	"andi	r16,0xFD\n"
+#endif
+//sync
+#define PORT_SYNC	PORTB
+#define DDR_SYNC	DDRB
+#define SYNC_PIN	1
+//sound
+#define PORT_SND	PORTB
+#define DDR_SND		DDRB
+#define	SND_PIN		3
 
-#elif defined(__AVR_ATmega8__) || defined(__AVR_ATmega88__) || defined(__AVR_ATmega168P__) || defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328__)
-#define _VID_PORT	PORTD
-#define	_VID_DDR	DDRD
-#define	_VID_PIN	7
-#define _SYNC_PORT	PORTB
-#define _SYNC_DDR	DDRB
-#define _SYNC_PIN	1
-#define _ANDI_HWS	"andi	r16,0x7F\n"
-#define _BLD_HWS	"bld	r16,7\n\t"
+#endif
 
+//automatic BST/BLD macro definition
+#if VID_PIN == 0
+#define BLD_HWS		"bld	r16,0\n\t"
+#define BST_HWS		"bst	r16,0\n\t"
+#elif VID_PIN == 1
+#define BLD_HWS		"bld	r16,1\n\t"
+#define BST_HWS		"bst	r16,1\n\t"
+#elif VID_PIN == 2
+#define BLD_HWS		"bld	r16,2\n\t"
+#define BST_HWS		"bst	r16,2\n\t"
+#elif VID_PIN == 3
+#define BLD_HWS		"bld	r16,3\n\t"
+#define BST_HWS		"bst	r16,3\n\t"
+#elif VID_PIN == 4
+#define BLD_HWS		"bld	r16,4\n\t"
+#define BST_HWS		"bst	r16,4\n\t"
+#elif VID_PIN == 5
+#define BLD_HWS		"bld	r16,5\n\t"
+#define BST_HWS		"bst	r16,5\n\t"
+#elif VID_PIN == 6
+#define BLD_HWS		"bld	r16,6\n\t"
+#define BST_HWS		"bst	r16,6\n\t"
+#elif VID_PIN == 7
+#define BLD_HWS		"bld	r16,7\n\t"
+#define BST_HWS		"bst	r16,7\n\t"
 #endif
 #endif

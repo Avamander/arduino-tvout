@@ -25,7 +25,7 @@
 #define PSERIAL_H
 
 #include <inttypes.h>
-#include "utils/Print.h"
+#include "Print.h"
 
 typedef struct {
 	uint8_t head;
