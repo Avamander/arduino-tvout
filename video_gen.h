@@ -28,6 +28,7 @@
 
 typedef struct {
 	volatile int scanLine;
+	volatile unsigned long frames;
 	int start_render;
 	int stop_render;
 	int lines_frame;
@@ -51,6 +52,7 @@ extern void (*line_handler)();
 extern void (*fastpoll)();
 
 void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr);
+
 
 void blank_line();
 void active_line();

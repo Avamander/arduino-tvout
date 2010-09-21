@@ -34,6 +34,7 @@
 
 #define _TIME_HORZ_SYNC				4.7
 #define _TIME_VIRT_SYNC				58.85
+#define _TIME_ACTIVE				46
 #define _CYCLES_VIRT_SYNC			((_TIME_VIRT_SYNC * _CYCLES_PER_US) - 1)
 #define _CYCLES_HORZ_SYNC			((_TIME_HORZ_SYNC * _CYCLES_PER_US) - 1)
 

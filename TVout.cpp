@@ -58,6 +58,7 @@
 
 #include "TVout.h"
 #include "video_gen.h"
+#include "spec/hardware_setup.h"
 
 // bad style I know but i dont feel like doing it the correct way.
 PROGMEM const unsigned char ascii3x5[] ={
@@ -428,6 +429,7 @@ void TVout::draw_box(unsigned char x0, unsigned char y0,
     }
 }
 
+
 /* draw a circle
  * x0,y0 around radius
  * with color 1 = white, 0=black, 2=invert
@@ -435,6 +437,7 @@ void TVout::draw_box(unsigned char x0, unsigned char y0,
  * safe draw or not 1 = safe
  * Added by Andy Crook 2010
  */
+ 
 void TVout::draw_circle(unsigned char x0, unsigned char y0,
 				unsigned char radius, char c, char d, char h) {
 
@@ -533,6 +536,42 @@ void TVout::draw_circle(unsigned char x0, unsigned char y0,
 			sp_safe(x0 - y, y0 - x,c,h);
 		}
 	}
+}
+
+
+void TVout::draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c) {
+
+	int f = 1 - radius;
+	int ddF_x = 1;
+	int	ddF_y = -2 * radius;
+	int x = 0;
+	int y = radius;
+	
+	sp(x0, y0 + radius,c);
+	sp(x0, y0 - radius,c);
+	sp(x0 + radius, y0,c);
+	sp(x0 - radius, y0,c);
+	
+	while(x < y) {
+		if(f >= 0) {
+			y--;
+			ddF_y += 2;
+			f += ddF_y;
+		}
+		x++;
+		ddF_x += 2;
+		f += ddF_x;    
+		sp(x0 + x, y0 + y,c);
+		sp(x0 - x, y0 + y,c);
+		sp(x0 + x, y0 - y,c);
+		sp(x0 - x, y0 - y,c);
+		sp(x0 + y, y0 + x,c);
+		sp(x0 - y, y0 + x,c);
+		sp(x0 + y, y0 - x,c);
+		sp(x0 - y, y0 - x,c);
+	}
+}
+void TVout::draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char fc) {
 }
 
 void TVout::shift(uint8_t distance, uint8_t direction) {
@@ -685,49 +724,6 @@ void TVout::print_char(uint8_t x, uint8_t y, char c) {
 	}
 }
 
-/* print a null terminated string at x,y
-*/
-void TVout::print_str(uint8_t x, uint8_t y, char *str) {
-	if (y >= display.vres)
-		return;
-	for (char i=0; str[i]!=0; i++) { 
-		if (x > (display.hres*8+font))
-			return;
-		print_char(x,y,str[i]);
-		x += font;
-	}
-}
-
-void TVout::write(uint8_t c) {
-	switch(c) {
-		case '\0':			//null
-			break;
-		case '\n':			//line feed
-			cursor_x = 0;
-			inc_txtline();
-			break;
-		case 8:				//backspace
-			cursor_x -= font;
-			print_char(cursor_x,cursor_y,' ');
-			break;
-		case 13:			//carriage return !?!?!?!VT!?!??!?!
-			cursor_x = 0;
-			break;
-		case 14:			//form feed new page(clear screen)
-			clear_screen();
-			break;
-		default:
-			if (cursor_x >= (display.hres*8 - font)) {
-				cursor_x = 0;
-				inc_txtline();
-				print_char(cursor_x,cursor_y,c);
-			}
-			else
-				print_char(cursor_x,cursor_y,c);
-			cursor_x += font;
-	}
-}
-
 void TVout::inc_txtline() {
 	if (cursor_y >= (display.vres - 8))
 		shift(8,UP);
@@ -769,8 +765,7 @@ static void inline sp_safe(unsigned char x, unsigned char y, char c, char d) {
 	}
 }
 
-void TVout::tone(unsigned int frequency)
-{
+void TVout::tone(unsigned int frequency) {
 	tone(frequency, 0);
 }
 
@@ -780,90 +775,70 @@ void TVout::tone(unsigned int frequency)
  */
 void TVout::tone(unsigned int frequency, unsigned long duration_ms) {
 
-  if (frequency == 0)
-  {
-    return;
-  }
-
+	if (frequency == 0)
+		return;
 
 #define TIMER 2
-//this is init code
-        TCCR2A = 0;
-        TCCR2B = 0;
+	//this is init code
+	TCCR2A = 0;
+	TCCR2B = 0;
 	TCCR2A |= _BV(WGM21);
 	TCCR2B |= _BV(CS20);
-//end init code
+	//end init code
 
-//most of this is taken from Tone.cpp from Arduino
-
-  uint8_t prescalarbits = 0b001;
-  uint32_t ocr = 0;
+	//most of this is taken from Tone.cpp from Arduino
+	uint8_t prescalarbits = 0b001;
+	uint32_t ocr = 0;
   
 
-    DDRB |= _BV(3); //set pb3 (digital pin 11) to output
+    DDR_SND |= _BV(SND_PIN); //set pb3 (digital pin 11) to output
 
     //we are using an 8 bit timer, scan through prescalars to find the best fit
-      ocr = F_CPU / frequency / 2 - 1;
-      prescalarbits = 0b001;  // ck/1: same for both timers
-      if (ocr > 255)
-      {
+	ocr = F_CPU / frequency / 2 - 1;
+    prescalarbits = 0b001;  // ck/1: same for both timers
+    if (ocr > 255) {
         ocr = F_CPU / frequency / 2 / 8 - 1;
         prescalarbits = 0b010;  // ck/8: same for both timers
 
-        if (ocr > 255)
-        {
-          ocr = F_CPU / frequency / 2 / 32 - 1;
-          prescalarbits = 0b011;
+        if (ocr > 255) {
+			ocr = F_CPU / frequency / 2 / 32 - 1;
+			prescalarbits = 0b011;
         }
 
-        if (ocr > 255)
-        {
-          ocr = F_CPU / frequency / 2 / 64 - 1;
-          prescalarbits = TIMER == 0 ? 0b011 : 0b100;
+        if (ocr > 255) {
+			ocr = F_CPU / frequency / 2 / 64 - 1;
+			prescalarbits = TIMER == 0 ? 0b011 : 0b100;
+			if (ocr > 255) {
+				ocr = F_CPU / frequency / 2 / 128 - 1;
+				prescalarbits = 0b101;
+			}
 
-          if (ocr > 255)
-          {
-            ocr = F_CPU / frequency / 2 / 128 - 1;
-            prescalarbits = 0b101;
-          }
-
-          if (ocr > 255)
-          {
-            ocr = F_CPU / frequency / 2 / 256 - 1;
-            prescalarbits = TIMER == 0 ? 0b100 : 0b110;
-            if (ocr > 255)
-            {
-              // can't do any better than /1024
-              ocr = F_CPU / frequency / 2 / 1024 - 1;
-              prescalarbits = TIMER == 0 ? 0b101 : 0b111;
-            }
-          }
+			if (ocr > 255) {
+				ocr = F_CPU / frequency / 2 / 256 - 1;
+				prescalarbits = TIMER == 0 ? 0b100 : 0b110;
+				if (ocr > 255) {
+					// can't do any better than /1024
+					ocr = F_CPU / frequency / 2 / 1024 - 1;
+					prescalarbits = TIMER == 0 ? 0b101 : 0b111;
+				}
+			}
         }
-
-      }
-      TCCR2B = prescalarbits;
+    }
+    TCCR2B = prescalarbits;
 
 	if (duration_ms > 0)
-	{
 		remainingToneVsyncs = duration_ms*60/1000; //60 here represents the framerate
-	} else
-	{
+	else
 		remainingToneVsyncs = -1;
-	}
  
-  
-      // Set the OCR for the given timer,
-      OCR2A = ocr;
-      //set it to toggle the pin by itself
-      TCCR2A &= ~(_BV(COM2A1)); //set COM2A1 to 0
-      TCCR2A |= _BV(COM2A0);
-      
-
+    // Set the OCR for the given timer,
+    OCR2A = ocr;
+    //set it to toggle the pin by itself
+    TCCR2A &= ~(_BV(COM2A1)); //set COM2A1 to 0
+    TCCR2A |= _BV(COM2A0);
 }
 
 void TVout::noTone() {
-  TCCR2B = 0;
-  PORTB &= ~(_BV(3)); //set pin 11 to 0
+	TCCR2B = 0;
+	PORT_SND &= ~(_BV(SND_PIN)); //set pin 11 to 0
 }
-
-
