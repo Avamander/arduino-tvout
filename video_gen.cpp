@@ -45,6 +45,7 @@ void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {
 	display.screen = scrnptr;
 	display.hres = x;
 	display.vres = y;
+	display.frames = 0;
 	
 	if (mode)
 		display.vscale_const = _PAL_LINE_DISPLAY/display.vres - 1;
@@ -55,7 +56,8 @@ void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {
 	//selects the widest render method that fits in 46us
 	//as of 9/16/10 rendermode 3 will not work for resolutions lower than
 	//192(display.hres lower than 24)
-	switch((46*_CYCLES_PER_US)/(display.hres*8)) {
+	unsigned char rmethod = (_TIME_ACTIVE*_CYCLES_PER_US)/(display.hres*8);
+	switch(rmethod) {
 		case 6:
 			render_line = &render_line6c;
 			break;
@@ -68,6 +70,11 @@ void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {
 		case 3:
 			render_line = &render_line3c;
 			break;
+		default:
+			if (rmethod > 6)
+				render_line = &render_line6c;
+			else
+				render_line = &render_line6c;
 	}
 	
 
@@ -143,6 +150,7 @@ void vsync_line() {
 	if (display.scanLine >= display.lines_frame) {
 		OCR1A = _CYCLES_VIRT_SYNC;
 		display.scanLine = 0;
+		display.frames++;
 
 		if (remainingToneVsyncs != 0)
 		{
@@ -154,7 +162,7 @@ void vsync_line() {
 		} else
 		{
 			TCCR2B = 0; //stop the tone
- 			PORTB &= ~(_BV(3)); //set pin 11 to 0
+ 			PORTB &= ~(_BV(SND_PIN));
 		}
 
 	}

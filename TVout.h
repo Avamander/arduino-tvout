@@ -53,7 +53,7 @@ Audio connected to arduino pin 10, hard coded for now
 #define TVOUT_H
 
 #include <stdint.h>
-#include "Print.h"
+#include "TVPrint.h"
 
 // macros for readability when selecting mode.
 #define PAL						1
@@ -81,6 +81,7 @@ Audio connected to arduino pin 10, hard coded for now
 #define	horz_res()					hres()
 #define vert_res()					vres()
 #define delay_frame(x)				delay(x)
+#define print_str(x,y,s)			print(x,y,s)
 
 // Macros for clearer usage
 #define clear_screen()				fill(0)
@@ -89,7 +90,7 @@ Audio connected to arduino pin 10, hard coded for now
 /*
 TVout.cpp contains a brief expenation of each function.
 */
-class TVout : public Print {
+class TVout : public TVPrint {
 public:
 	uint8_t * screen;
 	
@@ -112,34 +113,21 @@ public:
 	void draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char c);
 	void draw_box(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char c, char d, char e, char f); 
 	void draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char d, char h);
+	void draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c);
+	void draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char fc);
 	void fs_bitmap();
 	
 	//printing functions
 	void select_font(uint8_t f);
-	void print_char(uint8_t x, uint8_t y, char c);
-	void print_str(uint8_t x, uint8_t y, char *str);
-	virtual void write(uint8_t c);
-	using Print::write;
-	
-	//serial functions
-	void serial_begin(long baud);
-	void serial_end();
-	uint8_t serial_available();
-	int serial_read();
-	void serial_flush();
+	virtual void print_char(uint8_t x, uint8_t y, char c);
 
 	//tone functions
 	void tone(unsigned int frequency, unsigned long duration_ms);
 	void tone(unsigned int frequency);
 	void noTone();
-
 	
-private:
-	uint8_t font;
-	uint8_t cursor_x;
-	uint8_t cursor_y;
-	
-	void inc_txtline();
+protected:
+	virtual void inc_txtline();
 };
 
 static void inline sp(unsigned char x, unsigned char y, char c);
