@@ -80,7 +80,6 @@ Audio connected to arduino pin 10, hard coded for now
 #define resume_render()				resume()
 #define	horz_res()					hres()
 #define vert_res()					vres()
-#define delay_frame(x)				delay(x)
 #define print_str(x,y,s)			print(x,y,s)
 
 // Macros for clearer usage
@@ -104,6 +103,8 @@ public:
 	
 	//flow control functions
 	void delay(unsigned int x);
+	void delay_frame(unsigned int x);
+	unsigned long millis();
 	
 	//basic rendering functions
 	void set_pixel(uint8_t x, uint8_t y, char c);
@@ -120,11 +121,17 @@ public:
 	//printing functions
 	void select_font(uint8_t f);
 	virtual void print_char(uint8_t x, uint8_t y, char c);
+	
+	//hook setup functions
+	void set_vbi_hook(void (*func)(), char n = 0);
+	void set_hbi_hook(void (*func)());
 
 	//tone functions
 	void tone(unsigned int frequency, unsigned long duration_ms);
 	void tone(unsigned int frequency);
 	void noTone();
+	void playRTTTL(const char song[]);
+	void stopRTTTL();
 	
 protected:
 	virtual void inc_txtline();

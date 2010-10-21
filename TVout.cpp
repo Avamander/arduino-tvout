@@ -59,6 +59,7 @@
 #include "TVout.h"
 #include "video_gen.h"
 #include "spec/hardware_setup.h"
+#include "spec/video_properties.h"
 
 // bad style I know but i dont feel like doing it the correct way.
 PROGMEM const unsigned char ascii3x5[] ={
@@ -74,7 +75,7 @@ PROGMEM const unsigned char ascii8x8[] = {
 };
 
 PROGMEM const unsigned char bitmap[] = {
-#include "bitmaps/demobmp.h"
+#include "bitmaps/schematic.h"
 };
 
 /* call this to start video output with the default resolution.
@@ -151,15 +152,31 @@ char TVout::char_line() {
 	return ((display.hres*8)/font);
 }
 
+void TVout::delay(unsigned int x) {
+	unsigned long time = millis() + x;
+	while(millis() < time);
+}
+
 /* Delay for x frames
  * for NTSC 1 second = 60 frames
  * for PAL 1 second = 50 frames
+ * exits at the end of the last display line always
+ * delay_frame(1) is useful prior to drawing so there is little/no flicker.
  */
-void TVout::delay(unsigned int x) {
+void TVout::delay_frame(unsigned int x) {
 	while (x) {
 		while (display.scanLine != display.stop_render+1);
 		while (display.scanLine == display.stop_render+1);
 		x--;
+	}
+}
+
+unsigned long TVout::millis() {
+	if (display.lines_frame == _NTSC_LINE_FRAME) {
+		return display.frames * _NTSC_TIME_SCANLINE * _NTSC_LINE_FRAME / 1000;
+	}
+	else {
+		return display.frames * _PAL_TIME_SCANLINE * _PAL_LINE_FRAME / 1000;
 	}
 }
 
@@ -578,6 +595,8 @@ void TVout::shift(uint8_t distance, uint8_t direction) {
 	uint8_t * src;
 	uint8_t * dst;
 	uint8_t * end;
+	uint8_t shift;
+	uint8_t tmp;
 	switch(direction) {
 		case UP:
 			dst = display.screen;
@@ -604,10 +623,46 @@ void TVout::shift(uint8_t distance, uint8_t direction) {
 			}
 			break;
 		case LEFT:
-			//needs to be implimented
+			shift = distance & 7;
+			
+			for (uint8_t line = 0; line < display.vres; line++) {
+				dst = display.screen + display.hres*line;
+				src = dst + distance/8;
+				end = dst + display.hres-2;
+				while (src <= end) {
+					tmp = 0;
+					tmp = *src << shift;
+					src++;
+					tmp |= *src >> (8 - shift);
+					*dst = tmp;
+					dst++;
+				}
+				tmp = 0;
+				tmp = *src << shift;
+				*src = 0;
+				*dst = tmp;
+			}
 			break;
 		case RIGHT:
-			//needs to be implimented
+			shift = distance & 7;
+			
+			for (uint8_t line = 0; line < display.vres; line++) {
+				dst = display.screen + display.hres-1 + display.hres*line;
+				src = dst - distance/8;
+				end = dst - display.hres+2;
+				while (src >= end) {
+					tmp = 0;
+					tmp = *src >> shift;
+					src--;
+					tmp |= *src << (8 - shift);
+					*dst = tmp;
+					dst--;
+				}
+				tmp = 0;
+				tmp = *src >> shift;
+				*src = 0;
+				*dst = tmp;
+			}
 			break;
 	}
 }
@@ -765,6 +820,20 @@ static void inline sp_safe(unsigned char x, unsigned char y, char c, char d) {
 	}
 }
 
+
+void TVout::set_vbi_hook(void (*func)(), char n) {
+	if (n == 0)
+		vbi_hook0 = func;
+	else if (n == 1)
+		vbi_hook1 = func;
+}
+
+
+void TVout::set_hbi_hook(void (*func)()) {
+	hbi_hook = func;
+}
+
+
 void TVout::tone(unsigned int frequency) {
 	tone(frequency, 0);
 }
@@ -841,4 +910,12 @@ void TVout::tone(unsigned int frequency, unsigned long duration_ms) {
 void TVout::noTone() {
 	TCCR2B = 0;
 	PORT_SND &= ~(_BV(SND_PIN)); //set pin 11 to 0
+}
+
+void TVout::playRTTTL(const char song[]) {
+
+}
+
+void TVout::stopRTTTL() {
+
 }

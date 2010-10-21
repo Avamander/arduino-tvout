@@ -9,7 +9,7 @@ void setup()  {
   TV.select_font(_5X7);
   TV.println("Serial Terminal");
   TV.println("-- Version 0.1 --");
-  pserial.begin(57600);
+  TV.set_hbi_hook(pserial.begin(57600));
 }
 
 void loop() {

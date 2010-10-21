@@ -33,9 +33,12 @@ typedef struct {
 	unsigned char * buffer;
 } rbuffer;
 
+//define a void function() return type.
+typedef void (*pt2Funct)();
+
 class pollserial : public Print {
 	public:
-		void begin(long);
+		pt2Funct begin(long);
 		void end();
 		uint8_t available(void);
 		int read(void);

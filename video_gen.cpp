@@ -33,12 +33,17 @@
 
 int renderLine;
 TVout_vid display;
+TVout_RTTTL music;
 void (*render_line)();
 void (*line_handler)();
-void (*fastpoll)() = &empty;
+void (*hbi_hook)() = &empty;
+void (*vbi_hook0)() = &empty;
+void (*vbi_hook1)() = &empty;
 
 // sound properties
 volatile long remainingToneVsyncs;
+
+void empty() {}
 
 void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {
 
@@ -114,11 +119,15 @@ void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {
 
 // render a line
 ISR(TIMER1_OVF_vect) {
-	fastpoll();
+	hbi_hook();
 	line_handler();
 }
 
 void blank_line() {
+	if (display.scanLine == display.stop_render)
+		vbi_hook0();
+	else if (display.scanLine == display.stop_render+1)
+		vbi_hook1();
 	if ( display.scanLine == display.start_render) {
 		renderLine = 0;
 		display.vscale = display.vscale_const;
@@ -173,9 +182,6 @@ void vsync_line() {
 	display.scanLine++;
 }
 
-
-void empty() {
-}
 
 static void inline wait_until(uint8_t time) {
 	__asm__ __volatile__ (

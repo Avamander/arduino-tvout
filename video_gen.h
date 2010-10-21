@@ -41,18 +41,26 @@ typedef struct {
 	uint8_t * screen;
 } TVout_vid;
 
+typedef struct {
+	uint8_t dur;
+	uint8_t oct;
+	int bpm;
+	int num;
+	long wholenote;
+	uint8_t note;
+	uint8_t scale;
+	int position;
+	const char * music;
+} TVout_RTTTL;
+
 extern TVout_vid display;
+extern TVout_RTTTL music;
 
-extern unsigned char sbuffer[];
-extern uint8_t head;
-extern uint8_t tail;
-
-extern void (*render_line)();
-extern void (*line_handler)();
-extern void (*fastpoll)();
+extern void (*hbi_hook)();
+extern void (*vbi_hook0)();
+extern void (*vbi_hook1)();
 
 void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr);
-
 
 void blank_line();
 void active_line();
