@@ -75,7 +75,7 @@ pt2Funct pollserial::begin(long baud) {
 	if (use_u2x) {
 #if defined ( UDR0 )
 		UCSR0A = _BV(U2X0);
-#elif
+#else
 		UCSRA = _BV(U2X);
 #endif
 		baud_setting = (F_CPU / 4 / baud - 1) / 2;
@@ -83,7 +83,7 @@ pt2Funct pollserial::begin(long baud) {
 	else {
 #if defined ( UDR0 )
 		UCSR0A = 0;
-#elif
+#else
 		UCSRA = 0;
 #endif
 		baud_setting = (F_CPU / 8 / baud - 1) / 2;
@@ -93,7 +93,7 @@ pt2Funct pollserial::begin(long baud) {
 #if defined ( UDR0 )
 	UBRR0 = baud_setting;
 	UCSR0B = _BV(RXEN0) | _BV(TXEN0);
-#elif
+#else
 	UBRR = baud_setting;
 	UCSRB = _BV(RXEN) | _BV(TXEN);
 #endif
@@ -132,7 +132,7 @@ void pollserial::write(uint8_t c) {
 #if defined ( UDR0 )
 	while (!((UCSR0A) & _BV(UDRE0)));
 	UDR0 = c;
-#elif
+#else
 	while (!((UCSRA) & _BV(UDRE)));
 	UDR = c;
 #endif
