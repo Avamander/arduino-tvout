@@ -31,7 +31,7 @@ protected:
 	uint8_t cursor_x,cursor_y,font;
 	virtual void inc_txtline() = 0;
 public:
-	virtual void print_char(uint8_t, uint8_t, char) = 0;
+	virtual void print_char(uint8_t, uint8_t, unsigned char) = 0;
 	virtual void write(uint8_t);
 	using Print::write;
 	
