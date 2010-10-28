@@ -116,11 +116,11 @@ public:
 	void draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char d, char h);
 	void draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c);
 	void draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char fc);
-	void fs_bitmap();
+	void bitmap(uint8_t x, uint8_t y, const unsigned char * bmp, uint16_t i = 0, uint8_t width = 0, uint8_t lines = 0);
 	
 	//printing functions
 	void select_font(uint8_t f);
-	virtual void print_char(uint8_t x, uint8_t y, char c);
+	virtual void print_char(uint8_t x, uint8_t y, unsigned char c);
 	
 	//hook setup functions
 	void set_vbi_hook(void (*func)(), char n = 0);

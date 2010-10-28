@@ -74,10 +74,6 @@ PROGMEM const unsigned char ascii8x8[] = {
 #include "fonts/ascii8x8.h"
 };
 
-PROGMEM const unsigned char bitmap[] = {
-#include "bitmaps/schematic.h"
-};
-
 /* call this to start video output with the default resolution.
  * returns 4 if not enough memory.
  */
@@ -446,7 +442,6 @@ void TVout::draw_box(unsigned char x0, unsigned char y0,
     }
 }
 
-
 /* draw a circle
  * x0,y0 around radius
  * with color 1 = white, 0=black, 2=invert
@@ -591,6 +586,46 @@ void TVout::draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c) {
 void TVout::draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char fc) {
 }
 
+void TVout::bitmap(uint8_t x, uint8_t y, const unsigned char * bmp,
+				   uint16_t i, uint8_t width, uint8_t lines) {
+
+	uint8_t temp, lshift, rshift, save, xtra;
+	uint16_t si = 0;
+	
+	rshift = x&7;
+	lshift = 8-rshift;
+	if (width == 0) {
+		temp = pgm_read_byte((uint32_t)(bmp));
+		width = temp/8;
+	}
+	if (lines == 0)
+		lines = pgm_read_byte((uint32_t)(bmp) + 1);
+		
+	if (temp&7)
+		width++;
+	xtra = temp&7;
+	if (xtra == 0)
+		xtra = 8;
+	i += 2;
+	
+	for (uint8_t l = 0; l < lines; l++) {
+		si = (y + l)*display.hres + x/8;
+		screen[si] &= (0xff << lshift);
+		temp = pgm_read_byte((uint32_t)(bmp) + i++);
+		screen[si++] |= temp >> rshift;
+		for ( uint16_t b = i + width-1; i < b; i++) {
+			save = screen[si];
+			screen[si] = temp << lshift;
+			temp = pgm_read_byte((uint32_t)(bmp) + i);
+			screen[si++] |= temp >> rshift;
+		}
+		if (rshift + xtra < 8)
+			screen[si-1] |= save & (0xff >> rshift + xtra);
+		screen[si] &= (0xff >> rshift + xtra - 8);
+		screen[si] |= temp << lshift;
+	}
+}
+
 void TVout::shift(uint8_t distance, uint8_t direction) {
 	uint8_t * src;
 	uint8_t * dst;
@@ -632,6 +667,7 @@ void TVout::shift(uint8_t distance, uint8_t direction) {
 				while (src <= end) {
 					tmp = 0;
 					tmp = *src << shift;
+					*src = 0;
 					src++;
 					tmp |= *src >> (8 - shift);
 					*dst = tmp;
@@ -653,6 +689,7 @@ void TVout::shift(uint8_t distance, uint8_t direction) {
 				while (src >= end) {
 					tmp = 0;
 					tmp = *src >> shift;
+					*src = 0;
 					src--;
 					tmp |= *src << (8 - shift);
 					*dst = tmp;
@@ -667,21 +704,6 @@ void TVout::shift(uint8_t distance, uint8_t direction) {
 	}
 }
 
-/* very simple bitmap placeing function, bitmap must be full screen and
- * called bitmap, this will be expanded.
- */
-void TVout::fs_bitmap() {
-	uint8_t byte;
-	for (int i = 0; i < display.hres*display.vres; i++) {
-		byte = pgm_read_byte((uint32_t)(bitmap) + i);
-		display.screen[i] = byte;
-		if (byte != display.screen[i]) {
-			print_str(0,80,"Copy Err");
-			while(1);
-		}
-	}
-}
-
 void TVout::select_font(uint8_t f) {
 	font = f;
 }
@@ -690,7 +712,7 @@ void TVout::select_font(uint8_t f) {
  * print an 8x8 char c at x,y
  * x must be a multiple of 8
  */
-void TVout::print_char(uint8_t x, uint8_t y, char c) {
+void TVout::print_char(uint8_t x, uint8_t y, unsigned char c) {
 	uint8_t y_pos;
 	uint8_t j;
 	
