@@ -597,16 +597,18 @@ void TVout::bitmap(uint8_t x, uint8_t y, const unsigned char * bmp,
 	if (width == 0) {
 		temp = pgm_read_byte((uint32_t)(bmp));
 		width = temp/8;
+		i++;
 	}
-	if (lines == 0)
+	if (lines == 0) {
 		lines = pgm_read_byte((uint32_t)(bmp) + 1);
+		i++;
+	}
 		
 	if (temp&7)
 		width++;
 	xtra = temp&7;
 	if (xtra == 0)
 		xtra = 8;
-	i += 2;
 	
 	for (uint8_t l = 0; l < lines; l++) {
 		si = (y + l)*display.hres + x/8;
