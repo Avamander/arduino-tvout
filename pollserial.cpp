@@ -40,7 +40,7 @@ void USART_recieve() {
 			rxbuffer.head = i;
 		}
 	}
-#elif
+#else
 	if( UCSRA & _BV(RXC)) {
 		uint8_t i = (rxbuffer.head + 1) & (BUFFER_SIZE - 1);
 		if ( i != rxbuffer.tail) {
