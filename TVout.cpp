@@ -66,13 +66,16 @@ PROGMEM const unsigned char ascii3x5[] ={
 #include "fonts/ascii3x5.h"
 };
 
+
 PROGMEM const unsigned char ascii5x7[] = {
 #include "fonts/ascii5x7.h"
 };
 
+
 PROGMEM const unsigned char ascii8x8[] = {
 #include "fonts/ascii8x8.h"
 };
+
 
 /* call this to start video output with the default resolution.
  * returns 4 if not enough memory.
@@ -81,6 +84,7 @@ char TVout::begin(uint8_t mode) {
 		
 	return begin(mode,128,96);
 }
+
 
 /* call this to start video output with a specified resolution.
  * mode selects NTSC or PAL
@@ -107,6 +111,7 @@ char TVout::begin(uint8_t mode, uint8_t x, uint8_t y) {
 	return 0;
 }
 
+
 /* Clears the screen
 */
 void TVout::fill(uint8_t color) {
@@ -130,11 +135,13 @@ void TVout::fill(uint8_t color) {
 	}
 }
 
+
 /* Gets the Horizontal resolution of the screen
 */
 unsigned char TVout::hres() {
 	return display.hres*8;
 }
+
 
 /* Gets the Vertical resolution of the screen
 */
@@ -142,16 +149,19 @@ unsigned char TVout::vres() {
 	return display.vres;
 }
 
+
 /* Return the number of characters that will fit on a line
 */
 char TVout::char_line() {
 	return ((display.hres*8)/font);
 }
 
+
 void TVout::delay(unsigned int x) {
 	unsigned long time = millis() + x;
 	while(millis() < time);
 }
+
 
 /* Delay for x frames
  * for NTSC 1 second = 60 frames
@@ -167,6 +177,7 @@ void TVout::delay_frame(unsigned int x) {
 	}
 }
 
+
 unsigned long TVout::millis() {
 	if (display.lines_frame == _NTSC_LINE_FRAME) {
 		return display.frames * _NTSC_TIME_SCANLINE * _NTSC_LINE_FRAME / 1000;
@@ -176,6 +187,7 @@ unsigned long TVout::millis() {
 	}
 }
 
+
 /* plot one point 
  * at x,y with color 1=white 0=black 2=invert
  */
@@ -184,6 +196,7 @@ void TVout::set_pixel(uint8_t x, uint8_t y, char c) {
 		return;
 	sp(x,y,c);
 }
+
 
 /* Returns the value of pixel (x,y)
  * 0 if pixel is black
@@ -197,6 +210,7 @@ unsigned char TVout::get_pixel(uint8_t x, uint8_t y) {
 		return 1;
 	return 0;
 }
+
 
 /* draw a line
  * x1,y1 to x2,y2
@@ -267,6 +281,7 @@ void TVout::draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char c) {
 		e = e + ((int)dy<<1);
 	}
 }
+
 
 /* draw a box
  * x1,y1 to x2,y2
@@ -442,6 +457,7 @@ void TVout::draw_box(unsigned char x0, unsigned char y0,
     }
 }
 
+
 /* draw a circle
  * x0,y0 around radius
  * with color 1 = white, 0=black, 2=invert
@@ -449,7 +465,6 @@ void TVout::draw_box(unsigned char x0, unsigned char y0,
  * safe draw or not 1 = safe
  * Added by Andy Crook 2010
  */
- 
 void TVout::draw_circle(unsigned char x0, unsigned char y0,
 				unsigned char radius, char c, char d, char h) {
 
@@ -586,6 +601,7 @@ void TVout::draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c) {
 void TVout::draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char fc) {
 }
 
+
 void TVout::bitmap(uint8_t x, uint8_t y, const unsigned char * bmp,
 				   uint16_t i, uint8_t width, uint8_t lines) {
 
@@ -595,24 +611,32 @@ void TVout::bitmap(uint8_t x, uint8_t y, const unsigned char * bmp,
 	rshift = x&7;
 	lshift = 8-rshift;
 	if (width == 0) {
-		temp = pgm_read_byte((uint32_t)(bmp));
-		width = temp/8;
+		width = pgm_read_byte((uint32_t)(bmp) + i);
 		i++;
 	}
 	if (lines == 0) {
-		lines = pgm_read_byte((uint32_t)(bmp) + 1);
+		lines = pgm_read_byte((uint32_t)(bmp) + i);
 		i++;
 	}
 		
-	if (temp&7)
+	if (width&7) {
+		xtra = width&7;
+		width = width/8;
 		width++;
-	xtra = temp&7;
-	if (xtra == 0)
+	}
+	else {
 		xtra = 8;
+		width = width/8;
+	}
 	
 	for (uint8_t l = 0; l < lines; l++) {
 		si = (y + l)*display.hres + x/8;
-		screen[si] &= (0xff << lshift);
+		if (width == 1)
+			temp = 0xff >> rshift + xtra;
+		else
+			temp = 0;
+		save = screen[si];
+		screen[si] &= ((0xff << lshift) | temp);
 		temp = pgm_read_byte((uint32_t)(bmp) + i++);
 		screen[si++] |= temp >> rshift;
 		for ( uint16_t b = i + width-1; i < b; i++) {
@@ -622,11 +646,13 @@ void TVout::bitmap(uint8_t x, uint8_t y, const unsigned char * bmp,
 			screen[si++] |= temp >> rshift;
 		}
 		if (rshift + xtra < 8)
-			screen[si-1] |= save & (0xff >> rshift + xtra);
-		screen[si] &= (0xff >> rshift + xtra - 8);
+			screen[si-1] |= (save & (0xff >> rshift + xtra));	//test me!!!
+		if (rshift + xtra - 8 > 0)
+			screen[si] &= (0xff >> rshift + xtra - 8);
 		screen[si] |= temp << lshift;
 	}
 }
+
 
 void TVout::shift(uint8_t distance, uint8_t direction) {
 	uint8_t * src;
@@ -706,9 +732,11 @@ void TVout::shift(uint8_t distance, uint8_t direction) {
 	}
 }
 
+
 void TVout::select_font(uint8_t f) {
 	font = f;
 }
+
 
 /*
  * print an 8x8 char c at x,y
@@ -730,31 +758,7 @@ void TVout::print_char(uint8_t x, uint8_t y, unsigned char c) {
 		else
 			c-=39;
 			
-		uint8_t mask;
-		if (x & 0x03) {
-			if (x == (x & 0xF8))
-				mask = 0x0F;
-			else
-				mask = 0xF0;
-			for (char i = 0; i < 5; i++) {
-				j = pgm_read_byte(((uint32_t)(ascii3x5)) + c*5 +i);
-				display.screen[x+(y*display.hres)] = (display.screen[x+(y*display.hres)] & mask) | (j & ~mask);
-				y++;
-			}
-		}
-		else {
-
-			for (char i=0;i<5;i++) {
-				y_pos = y + i;
-
-				j = pgm_read_byte(((uint32_t)(ascii3x5)) + c*5 + i);
-
-				sp(x,   y_pos, (j & 0x80)==0x80);  
-				sp(x+1, y_pos, (j & 0x40)==0x40); 
-				sp(x+2, y_pos, (j & 0x20)==0x20);
-				sp(x+3, y_pos, (j & 0x10)==0x10);
-			}
-		}
+		bitmap(x,y,ascii3x5,c*5,4,5);
 	}
 	else if (font == _5X7) {
 		
@@ -763,45 +767,13 @@ void TVout::print_char(uint8_t x, uint8_t y, unsigned char c) {
 			return;
 		else
 			c -= 32;
-		for (char i=0;i<7;i++) {
-			y_pos = y + i;
-
-			j = pgm_read_byte(((uint32_t)(ascii5x7)) + c*7 + i);
-
-			sp(x,   y_pos, (j & 0x80)==0x80);  
-			sp(x+1, y_pos, (j & 0x40)==0x40); 
-			sp(x+2, y_pos, (j & 0x20)==0x20);
-			sp(x+3, y_pos, (j & 0x10)==0x10);
-			sp(x+4, y_pos, (j & 0x08)==0x08);
-		}
+		bitmap(x,y,ascii5x7,c*7,5,7);
 	}
 	else if (font == _8X8) {
-		if (x & 0x07) {
-			for (char i=0;i<8;i++) {
-				y_pos = y + i;
-
-				j = pgm_read_byte(((uint32_t)(ascii8x8)) + c*8 + i);
-
-				sp(x,   y_pos, (j & 0x80)==0x80);  
-				sp(x+1, y_pos, (j & 0x40)==0x40); 
-				sp(x+2, y_pos, (j & 0x20)==0x20);
-				sp(x+3, y_pos, (j & 0x10)==0x10);
-				sp(x+4, y_pos, (j & 0x08)==0x08);
-				sp(x+5, y_pos, (j & 0x04)==0x04);
-				sp(x+6, y_pos, (j & 0x02)==0x02);
-				sp(x+7, y_pos, (j & 0x01)==0x01);
-			}
-		}
-		else {
-			x = x/8;
-			for (char i = 0; i < 8; i++) {
-				j = pgm_read_byte(((uint32_t)(ascii8x8)) + c*8 + i);
-				display.screen[x+y*display.hres] = j;
-				y++;
-			}
-		}
+		bitmap(x,y,ascii8x8,c*8,8,8);
 	}
 }
+
 
 void TVout::inc_txtline() {
 	if (cursor_y >= (display.vres - 8))
@@ -809,6 +781,7 @@ void TVout::inc_txtline() {
 	else
 		cursor_y += 8;
 }
+
 
 /* Inline version of set_pixel that does not perform a bounds check
 */
@@ -861,6 +834,7 @@ void TVout::set_hbi_hook(void (*func)()) {
 void TVout::tone(unsigned int frequency) {
 	tone(frequency, 0);
 }
+
 
 /* Simple tone generation
  * Takes the frequency and duration in ms
@@ -931,14 +905,17 @@ void TVout::tone(unsigned int frequency, unsigned long duration_ms) {
     TCCR2A |= _BV(COM2A0);
 }
 
+
 void TVout::noTone() {
 	TCCR2B = 0;
 	PORT_SND &= ~(_BV(SND_PIN)); //set pin 11 to 0
 }
 
+
 void TVout::playRTTTL(const char song[]) {
 
 }
+
 
 void TVout::stopRTTTL() {
 
