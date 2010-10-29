@@ -205,6 +205,7 @@ static void inline wait_until(uint8_t time) {
 }
 
 void render_line6c() {
+	#ifndef REMOVE6C
 	__asm__ __volatile__ (
 		"ADD	r26,r28\n\t"
 		"ADC	r27,r29\n\t"
@@ -254,10 +255,11 @@ void render_line6c() {
 		[hres] "d" (display.hres)
 		: "r16" // try to remove this clobber later...
 	);
+	#endif
 }
 
 void render_line5c() {
-
+	#ifndef REMOVE5C
 	__asm__ __volatile__ (
 		"ADD	r26,r28\n\t"
 		"ADC	r27,r29\n\t"
@@ -306,9 +308,11 @@ void render_line5c() {
 		[hres] "d" (display.hres)
 		: "r16" // try to remove this clobber later...
 	);
+	#endif
 }
 
 void render_line4c() {
+	#ifndef REMOVE4C
 	__asm__ __volatile__ (
 		"ADD	r26,r28\n\t"
 		"ADC	r27,r29\n\t"
@@ -353,11 +357,12 @@ void render_line4c() {
 		[hres] "d" (display.hres)
 		: "r16" // try to remove this clobber later...
 	);
+	#endif
 }
 
 // only 16mhz right now!!!
 void render_line3c() {
-
+	#ifndef REMOVE3C
 	__asm__ __volatile__ (
 	".macro byteshift\n\t"
 		"LD		__tmp_reg__,X+\n\t"
@@ -461,4 +466,5 @@ void render_line3c() {
 		[hres] "d" (display.hres)
 		: "r16" // try to remove this clobber later...
 	);
+	#endif
 }
