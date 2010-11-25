@@ -31,13 +31,17 @@
 #include "spec/asm_macros.h"
 #include "spec/hardware_setup.h"
 
+//#define REMOVE6C
+//#define REMOVE5C
+//#define REMOVE4C
+//#define REMOVE3C
+
 int renderLine;
 TVout_vid display;
-void (*render_line)();
-void (*line_handler)();
+void (*render_line)();			//remove me
+void (*line_handler)();			//remove me
 void (*hbi_hook)() = &empty;
-void (*vbi_hook0)() = &empty;
-void (*vbi_hook1)() = &empty;
+void (*vbi_hook)() = &empty;
 
 // sound properties
 volatile long remainingToneVsyncs;
@@ -78,7 +82,7 @@ void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {
 			if (rmethod > 6)
 				render_line = &render_line6c;
 			else
-				render_line = &render_line6c;
+				render_line = &render_line3c;
 	}
 	
 
@@ -93,8 +97,7 @@ void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {
 	TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10);
 	
 	if (mode) {
-		display.start_render = _PAL_LINE_MID - ((display.vres * (display.vscale+1))/2);
-		display.stop_render = display.start_render + (display.vres * (display.vscale+1));
+		display.start_render = _PAL_LINE_MID - ((display.vres * (display.vscale_const+1))/2);
 		display.output_delay = _PAL_CYCLES_OUTPUT_START;
 		display.vsync_end = _PAL_LINE_STOP_VSYNC;
 		display.lines_frame = _PAL_LINE_FRAME;
@@ -102,8 +105,7 @@ void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {
 		OCR1A = _CYCLES_HORZ_SYNC;
 		}
 	else {
-		display.start_render = _NTSC_LINE_MID - ((display.vres * (display.vscale+1))/2) + 8;
-		display.stop_render = display.start_render + (display.vres * (display.vscale+1));
+		display.start_render = _NTSC_LINE_MID - ((display.vres * (display.vscale_const+1))/2) + 8;
 		display.output_delay = _NTSC_CYCLES_OUTPUT_START;
 		display.vsync_end = _NTSC_LINE_STOP_VSYNC;
 		display.lines_frame = _NTSC_LINE_FRAME;
@@ -123,17 +125,16 @@ ISR(TIMER1_OVF_vect) {
 }
 
 void blank_line() {
-	if (display.scanLine == display.stop_render)
-		vbi_hook0();
-	else if (display.scanLine == display.stop_render+1)
-		vbi_hook1();
+		
 	if ( display.scanLine == display.start_render) {
 		renderLine = 0;
 		display.vscale = display.vscale_const;
 		line_handler = &active_line;
 	}
-	else if (display.scanLine == display.lines_frame)
+	else if (display.scanLine == display.lines_frame) {
 		line_handler = &vsync_line;
+		vbi_hook();
+	}
 	
 	display.scanLine++;
 }
@@ -148,7 +149,7 @@ void active_line() {
 	else
 		display.vscale--;
 		
-	if ((display.scanLine + 1) == display.stop_render)
+	if ((display.scanLine + 1) == (int)(display.start_render + (display.vres*(display.vscale_const+1))))
 		line_handler = &blank_line;
 		
 	display.scanLine++;

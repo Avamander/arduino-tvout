@@ -23,58 +23,53 @@
  OTHER DEALINGS IN THE SOFTWARE.
 */
 
-/*
- This library provides a simple method for outputting data to a tv
- from a frame buffer stored in sram.  This implementation is done
- completly by interupt and will return give as much cpu time to the
- application as possible.
- 
- Limitations:
-  -	Currently only works with NTSC. PAl support would require modifying
-	the timings in video_gen.h as well as the OCR1A ISR to allow for a 16bit
-	line counter.
-  -	each frame only consists of 256 scanlines vs 262 for the fake progressive
-	signal this is supposed to generate (works fine on my tv).
-  - virtical sync does not match the specs at all.
- 
-
- current hardware setup:
- Pin9: Sync line:  -->|--/\/\/\--o
-   Diode 1Kohm   |
- Pin8: Video line: -->|--/\/\/\--o---------------- RCA tip
-   Diode 330ohm  |
- o--/--/\/\/\--o-- RCA GND
-							 Switch  75ohm  |
-									V
-											   GND
-											   
-  Audio connected to arduino pin 10, hard coded for now
+/* A note about how Color is defined for this version of TVout
+ *
+ * Where ever choosing a color is mentioned the following are true:
+ * 	BLACK	=0
+ *	WHITE	=1
+ *	INVERT	=2
+ *	All others will be ignored.
 */
 
-#include <avr/io.h>
-#include <avr/pgmspace.h>
-#include <avr/interrupt.h>
-#include <stdlib.h>
-
 #include "TVout.h"
-#include "video_gen.h"
-#include "spec/hardware_setup.h"
-#include "spec/video_properties.h"
 
 
-/* call this to start video output with the default resolution.
- * returns 4 if not enough memory.
+/* Call this to start video output with the default resolution.
+ * 
+ * Arguments:
+ *	mode:
+ *		The video standard to follow:
+ *		PAL		=1	=_PAL
+ *		NTSC	=0	=_NTSC
+ *
+ * Returns:
+ *	0 if no error.
+ *	4 if there is not enough memory.
  */
 char TVout::begin(uint8_t mode) {
 		
 	return begin(mode,128,96);
-}
+} // end of begin
 
 
 /* call this to start video output with a specified resolution.
- * mode selects NTSC or PAL
- * x is the horizontal resolution MUST BE DIVISABLE BY 8 (max 240)
- * y is the vertical resolution (max 255)
+ *
+ * Arguments:
+ *	mode:
+ *		The video standard to follow:
+ *		PAL		=1	=_PAL
+ *		NTSC	=0	=_NTSC
+ *	x:
+ *		Horizonal resolution must be divisable by 8.
+ *	y:
+ *		Vertical resolution.
+ *
+ *	Returns:
+ *		0 if no error.
+ *		1 if x is not divisable by 8.
+ *		2 if y is to large (NTSC only cannot fill PAL vertical resolution by 8bit limit)
+ *		4 if there is not enough memory for the frame buffer.
  */
 char TVout::begin(uint8_t mode, uint8_t x, uint8_t y) {
 	
@@ -93,10 +88,15 @@ char TVout::begin(uint8_t mode, uint8_t x, uint8_t y) {
 	render_setup(mode,x,y,screen);
 	clear_screen();
 	return 0;
-}
+} // end of begin
 
 
-/* Clears the screen
+/* Fill the screen with some color.
+ *
+ * Arguments:
+ *	color:
+ *		The color to fill the screen with.
+ *		(see color note at the top of this file)
 */
 void TVout::fill(uint8_t color) {
 	switch(color) {
@@ -117,51 +117,75 @@ void TVout::fill(uint8_t color) {
 				display.screen[i] = ~display.screen[i];
 			break;
 	}
-}
+} // end of fill
 
 
 /* Gets the Horizontal resolution of the screen
+ *
+ * Returns the horizonal resolution.
 */
 unsigned char TVout::hres() {
 	return display.hres*8;
-}
+} // end of hres
 
 
 /* Gets the Vertical resolution of the screen
+ *
+ * Returns:
+ *	The vertical resolution
 */
 unsigned char TVout::vres() {
 	return display.vres;
-}
+} // end of vres
 
 
 /* Return the number of characters that will fit on a line
+ *
+ * Returns:
+ *	The number of characters that will fit on a text line starting from x=0.
+ *	Will return -1 for dynamic width fonts as this cannot be determined.
 */
 char TVout::char_line() {
 	return ((display.hres*8)/pgm_read_byte(font));
-}
+} // end of char_line
 
 
+/* delay for x ms
+ * The resolution is 16ms for NTSC and 20ms for PAL
+ *
+ * Arguments:
+ *	x:
+ *		The number of ms this function should consume.
+*/
 void TVout::delay(unsigned int x) {
 	unsigned long time = millis() + x;
 	while(millis() < time);
-}
+} // end of delay
 
 
-/* Delay for x frames
- * for NTSC 1 second = 60 frames
- * for PAL 1 second = 50 frames
- * exits at the end of the last display line always
+/* Delay for x frames, exits at the end of the last display line.
  * delay_frame(1) is useful prior to drawing so there is little/no flicker.
+ *
+ * Arguments:
+ *	x:
+ *		The number of frames to delay for.
  */
 void TVout::delay_frame(unsigned int x) {
+	int stop_line = (int)(display.start_render + (display.vres*(display.vscale_const+1)))+1;
 	while (x) {
-		while (display.scanLine != display.stop_render+1);
-		while (display.scanLine == display.stop_render+1);
+		while (display.scanLine != stop_line);
+		while (display.scanLine == stop_line);
 		x--;
 	}
-}
+} // end of delay_frame
 
 
+/* Get the time in ms since begin was called.
+ * The resolution is 16ms for NTSC and 20ms for PAL
+ *
+ * Returns:
+ *	The time in ms since video generation has started.
+*/
 unsigned long TVout::millis() {
 	if (display.lines_frame == _NTSC_LINE_FRAME) {
 		return display.frames * _NTSC_TIME_SCANLINE * _NTSC_LINE_FRAME / 1000;
@@ -169,22 +193,76 @@ unsigned long TVout::millis() {
 	else {
 		return display.frames * _PAL_TIME_SCANLINE * _PAL_LINE_FRAME / 1000;
 	}
+} // end of millis
+
+
+/* force the number of times to display each line.
+ *
+ * Arguments:
+ *	sfactor:
+ *		The scale number of times to repeate each line.
+ */
+void TVout::force_vscale(char sfactor) {
+	delay_frame(1);
+	display.vscale_const = sfactor - 1;
+	display.vscale = sfactor - 1;
 }
 
 
-/* plot one point 
- * at x,y with color 1=white 0=black 2=invert
+/* force the output start time of a scanline in micro seconds.
+ *
+ * Arguments:
+ *	time:
+ *		The new output start time in micro seconds.
+ */
+void TVout::force_outstart(uint8_t time) {
+	delay_frame(1);
+	display.output_delay = ((time * _CYCLES_PER_US) - 1);
+}
+
+
+/* force the start line for active video
+ *
+ * Arguments:
+ *	line:
+ *		The new active video output start line
+ */
+void TVout::force_linestart(uint8_t line) {
+	delay_frame(1);
+	display.start_render = line;
+}
+
+
+/* Set the color of a pixel
+ * 
+ * Arguments:
+ *	x:
+ *		The x coordinate of the pixel.
+ *	y:
+ *		The y coordinate of the pixel.
+ *	c:
+ *		The color of the pixel
+ *		(see color note at the top of this file)
  */
 void TVout::set_pixel(uint8_t x, uint8_t y, char c) {
 	if (x >= display.hres*8 || y >= display.vres)
 		return;
 	sp(x,y,c);
-}
+} // end of set_pixel
 
 
-/* Returns the value of pixel (x,y)
- * 0 if pixel is black
- * !0 if pixel is white
+/* get the color of the pixel at x,y
+ * 
+ * Arguments:
+ *	x:
+ *		The x coordinate of the pixel.
+ *	y:
+ *		The y coordinate of the pixel.
+ *
+ * Returns:
+ *	The color of the pixel.
+ *	(see color note at the top of this file)
+ *
  * Thank you gijs on the arduino.cc forum for the non obviouse fix.
 */
 unsigned char TVout::get_pixel(uint8_t x, uint8_t y) {
@@ -193,12 +271,23 @@ unsigned char TVout::get_pixel(uint8_t x, uint8_t y) {
 	if (display.screen[x/8+y*display.hres] & (0x80 >>(x&7)))
 		return 1;
 	return 0;
-}
+} // end of get_pixel
 
 
-/* draw a line
- * x1,y1 to x2,y2
- * with color 1 = white, 0=black, 2=invert
+/* Draw a line from one point to another
+ *
+ * Arguments:
+ *	x0:
+ *		The x coordinate of point 0.
+ *	y0:
+ *		The y coordinate of point 0.
+ *	x1:
+ *		The x coordinate of point 1.
+ *	y1:
+ *		The y coordinate of point 1.
+ *	c:
+ *		The color of the line.
+ *		(see color note at the top of this file)
  */
 void TVout::draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char c) {
 
@@ -264,9 +353,22 @@ void TVout::draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char c) {
 			x = x + s1;
 		e = e + ((int)dy<<1);
 	}
-}
+} // end of draw_line
 
 
+/* Fill a row from one point to another
+ *
+ * Argument:
+ *	line:
+ *		The row that fill will be performed on.
+ *	x0:
+ *		edge 0 of the fill.
+ *	x1:
+ *		edge 1 of the fill.
+ *	c:
+ *		the color of the fill.
+ *		(see color note at the top of this file)
+*/
 void TVout::fill_line(uint8_t line, uint16_t x0, uint16_t x1, uint8_t c) {
 	uint8_t lbit, rbit;
 	
@@ -305,27 +407,57 @@ void TVout::fill_line(uint8_t line, uint16_t x0, uint16_t x1, uint8_t c) {
 			screen[x0] ^= rbit;
 		}
 	}
-}
+} // end of fill_line
 
 
+/* draw a rectangle at x,y with a specified width and height
+ * 
+ * Arguments:
+ *	x0:
+ *		The x coordinate of upper left corner of the rectangle.
+ *	y0:
+ *		The y coordinate of upper left corner of the rectangle.
+ *	w:
+ *		The widht of the rectangle.
+ *	h:
+ *		The height of the rectangle.
+ *	c:
+ *		The color of the rectangle.
+ *		(see color note at the top of this file)
+ *	fc:
+ *		The fill color of the rectangle.
+ *		(see color note at the top of this file)
+ *		default =-1 (no fill)
+*/
 void TVout::draw_rect(uint8_t x0, uint8_t y0, uint8_t w, uint8_t h, char c, char fc) {
 	
 	if (fc != -1) {
 		for (unsigned char i = y0; i < y0+h; i++)
-			//draw_line(x0,i,x0+w,i,fc);
 			fill_line(i,x0,x0+w,fc);
 	}
 	draw_line(x0,y0,x0+w,y0,c);
 	draw_line(x0,y0,x0,y0+h,c);
 	draw_line(x0+w,y0,x0+w,y0+h,c);
 	draw_line(x0,y0+h,x0+w,y0+h,c);
-}
+} // end of draw_rect
 
 
-/* draw a circle
- * x0,y0 around radius
- * with color 1 = white, 0=black, 2=invert
- * with fill 0 = black fill, 1 = white fill, 2 = invert fill, -1/blank = nofill
+/* draw a circle given a coordinate x,y and radius both filled and non filled.
+ *
+ * Arguments:
+ * 	x0:
+ *		The x coordinate of the center of the circle.
+ *	y0:
+ *		The y coordinate of the center of the circle.
+ *	radius:
+ *		The radius of the circle.
+ *	c:
+ *		The color of the circle.
+ *		(see color note at the top of this file)
+ *	fc:
+ *		The color to fill the circle.
+ *		(see color note at the top of this file)
+ *		defualt  =-1 (do not fill)
  */
 void TVout::draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char fc) {
 
@@ -337,7 +469,6 @@ void TVout::draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char fc)
 	
 	//there is a fill color
 	if (fc != -1)
-		//draw_line(x0-radius,y0,x0+radius,y0,fc);
 		fill_line(y0,x0-radius,x0+radius,fc);
 	
 	sp(x0, y0 + radius,c);
@@ -355,13 +486,9 @@ void TVout::draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char fc)
 		ddF_x += 2;
 		f += ddF_x;
 		if (fc != -1) {	//there is a fill color
-			//draw_line(x0-x,y0+y,x0+x,y0+y,fc);
 			fill_line(y0+y,x0-x,x0+x,fc);
-			//draw_line(x0-x,y0-y,x0+x,y0-y,fc);
 			fill_line(y0-y,x0-x,x0+x,fc);
-			//draw_line(x0-y,y0+x,x0+y,y0+x,fc);
 			fill_line(y0+x,x0-y,x0+y,fc);
-			//draw_line(x0-y,y0-x,x0+y,y0-x,fc);
 			fill_line(y0-x,x0-y,x0+y,fc);
 		}
 		sp(x0 + x, y0 + y,c);
@@ -373,9 +500,28 @@ void TVout::draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char fc)
 		sp(x0 + y, y0 - x,c);
 		sp(x0 - y, y0 - x,c);
 	}
-}
+} // end of draw_circle
 
 
+/* place a bitmap at x,y where the bitmap is defined as {width,height,imagedata....}
+ *
+ * Arguments:
+ *	x:
+ *		The x coordinate of the upper left corner.
+ *	y:
+ *		The y coordinate of the upper left corner.
+ *	bmp:
+ *		The bitmap data to print.
+ *	i:
+ *		The offset into the image data to start at.  This is mainly used for fonts.
+ *		default	=0
+ *	width:
+ *		Override the bitmap width. This is mainly used for fonts.
+ *		default =0 (do not override)
+ *	height:
+ *		Override the bitmap height. This is mainly used for fonts.
+ *		default	=0 (do not override)
+*/
 void TVout::bitmap(uint8_t x, uint8_t y, const unsigned char * bmp,
 				   uint16_t i, uint8_t width, uint8_t lines) {
 
@@ -425,9 +571,22 @@ void TVout::bitmap(uint8_t x, uint8_t y, const unsigned char * bmp,
 			screen[si] &= (0xff >> rshift + xtra - 8);
 		screen[si] |= temp << lshift;
 	}
-}
+} // end of bitmap
 
 
+/* shift the pixel buffer in any direction
+ * This function will shift the screen in a direction by any distance.
+ *
+ * Arguments:
+ *	distance:
+ *		The distance to shift the screen
+ *	direction:
+ *		The direction to shift the screen the direction and the integer values:
+ *		UP		=0
+ *		DOWN	=1
+ *		LEFT	=2
+ *		RIGHT	=3
+*/
 void TVout::shift(uint8_t distance, uint8_t direction) {
 	uint8_t * src;
 	uint8_t * dst;
@@ -504,29 +663,11 @@ void TVout::shift(uint8_t distance, uint8_t direction) {
 			}
 			break;
 	}
-}
-
-
-void TVout::inc_txtline() {
-	if (cursor_y >= (display.vres - pgm_read_byte(font+1)))
-		shift(pgm_read_byte(font+1),UP);
-	else
-		cursor_y += pgm_read_byte(font+1);
-}
-
-
-/*
- * print an 8x8 char c at x,y
- * x must be a multiple of 8
- */
-void TVout::print_char(uint8_t x, uint8_t y, unsigned char c) {
-
-	c -= pgm_read_byte(font+2);
-	bitmap(x,y,font,(c*pgm_read_byte(font+1))+3,pgm_read_byte(font),pgm_read_byte(font+1));
-}
+} // end of shift
 
 
 /* Inline version of set_pixel that does not perform a bounds check
+ * This function will be replaced by a macro.
 */
 static void inline sp(uint8_t x, uint8_t y, char c) {
 	if (c==1)
@@ -535,29 +676,53 @@ static void inline sp(uint8_t x, uint8_t y, char c) {
 		display.screen[(x/8) + (y*display.hres)] &= ~0x80 >> (x&7);
 	else
 		display.screen[(x/8) + (y*display.hres)] ^= 0x80 >> (x&7);
-}
+} // end of sp
 
 
-void TVout::set_vbi_hook(void (*func)(), char n) {
-	if (n == 0)
-		vbi_hook0 = func;
-	else if (n == 1)
-		vbi_hook1 = func;
-}
+/* set the vertical blank function call
+ * The function passed to this function will be called one per frame. The function should be quickish.
+ *
+ * Arguments:
+ *	func:
+ *		The function to call.
+ */
+void TVout::set_vbi_hook(void (*func)()) {
+	vbi_hook = func;
+} // end of set_vbi_hook
 
 
+/* set the horizonal blank function call
+ * This function passed to this function will be called one per scan line.
+ * The function MUST be VERY FAST(~2us max).
+ *
+ * Arguments:
+ *	funct:
+ *		The function to call.
+ */
 void TVout::set_hbi_hook(void (*func)()) {
 	hbi_hook = func;
-}
-
-
-void TVout::tone(unsigned int frequency) {
-	tone(frequency, 0);
-}
+} // end of set_bhi_hook
 
 
 /* Simple tone generation
- * Takes the frequency and duration in ms
+ *
+ * Arguments:
+ *	frequency:
+ *		the frequency of the tone
+ * courtesy of adamwwolf
+ */
+void TVout::tone(unsigned int frequency) {
+	tone(frequency, 0);
+} // end of tone
+
+
+/* Simple tone generation
+ *
+ * Arguments:
+ *	frequency:
+ *		the frequency of the tone
+ *	duration_ms:
+ *		The duration to play the tone in ms
  * courtesy of adamwwolf
  */
 void TVout::tone(unsigned int frequency, unsigned long duration_ms) {
@@ -623,10 +788,11 @@ void TVout::tone(unsigned int frequency, unsigned long duration_ms) {
     //set it to toggle the pin by itself
     TCCR2A &= ~(_BV(COM2A1)); //set COM2A1 to 0
     TCCR2A |= _BV(COM2A0);
-}
+} // end of tone
 
-
+/* Stops tone generation
+ */
 void TVout::noTone() {
 	TCCR2B = 0;
 	PORT_SND &= ~(_BV(SND_PIN)); //set pin 11 to 0
-}
+} // end of noTone
