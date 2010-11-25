@@ -29,23 +29,21 @@
 typedef struct {
 	volatile int scanLine;
 	volatile unsigned long frames;
-	int start_render;
-	int stop_render;
-	int lines_frame;
+	unsigned char start_render;
+	int lines_frame;	  	//remove me
 	uint8_t vres;
 	uint8_t hres;
-	uint8_t output_delay;
-	char vscale_const;
-	char vscale;
-	char vsync_end;
+	uint8_t output_delay; 	//remove me
+	char vscale_const;		//combine me with status switch
+	char vscale;			//combine me too.
+	char vsync_end;			//remove me
 	uint8_t * screen;
 } TVout_vid;
 
 extern TVout_vid display;
 
 extern void (*hbi_hook)();
-extern void (*vbi_hook0)();
-extern void (*vbi_hook1)();
+extern void (*vbi_hook)();
 
 void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr);
 
