@@ -12,7 +12,7 @@ SYNC is on OCR1A and AUDIO is on OC2A
 
 There are some timing issues with the m1284p, may be related to sanguino core.
 
-On NG, Decimila, UNO, Nano the sync is pin 9, video on 7 and audio on 11. On Mega2560	sync is pin 11, video is on A7(D29)	and audio is on pin 10.
+On NG, Decimila, UNO and Nano the sync is pin 9, video on 7 and audio on 11. On Mega2560	sync is pin 11, video is on A7(D29)	and audio is on pin 10.
 
 
 
