@@ -1,4 +1,4 @@
-# arduino-tvout
+# Arduino-TVout
 
 This is a library for generating composite video on an ATmega microcontroller.
 
