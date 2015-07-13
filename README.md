@@ -6,7 +6,7 @@ The library can create NTSC or PAL at a resolution of 128x96. The library curren
 
 
 
-Connections
+##Connections
 
 SYNC is on OCR1A and AUDIO is on OC2A
 
@@ -17,7 +17,7 @@ On NG, Decimila, UNO, Nano the sync is pin 9, video on 7 and audio on 11. On Meg
 
 
 
-Examples
+##Examples
 
 https://youtu.be/MEg_V4YZDh0
 
