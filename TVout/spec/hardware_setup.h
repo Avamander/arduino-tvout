@@ -107,6 +107,27 @@
 #define PORT_SND	PORTB
 #define DDR_SND		DDRB
 #define	SND_PIN		4
+#elif defined(__AVR_ATmega32U4__) // Modified for Arduino Leonardo
+//video
+#define PORT_VID	PORTB
+#define	DDR_VID		DDRB
+#define	VID_PIN		4 // 8
+//sync
+#define PORT_SYNC	PORTB
+#define DDR_SYNC	DDRB
+#define SYNC_PIN	5 // 9
+//sound
+#define PORT_SND	PORTB
+#define DDR_SND		DDRB
+#define	SND_PIN		7 // 11
+#define TCCR2A		TCCR0A
+#define TCCR2B		TCCR0B
+#define OCR2A		OCR0A
+#define OCR2B		OCR0B
+#define COM2A0		COM0A0
+#define COM2A1		COM0A1
+#define CS20		CS00
+#define WGM21		WGM01
 #endif
 
 //automatic BST/BLD/ANDI macro definition
