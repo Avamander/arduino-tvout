@@ -8,7 +8,7 @@ The library can create NTSC or PAL at a resolution of 128x96. The library curren
 
 ##Connections
 
-SYNC is on OCR1A and AUDIO is on OC2A
+SYNC is on OCR1A and AUDIO is on OCR2A
 
 There are some timing issues with the m1284p, may be related to sanguino core.
 
