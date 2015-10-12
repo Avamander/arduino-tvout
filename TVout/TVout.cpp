@@ -91,6 +91,14 @@ char TVout::begin(uint8_t mode, uint8_t x, uint8_t y) {
 } // end of begin
 
 
+/* Stop video render and free the used memory.
+ */
+ void TVout::end() {
+	TIMSK1 = 0;
+	free(screen);
+}
+
+
 /* Fill the screen with some color.
  *
  * Arguments:
@@ -122,7 +130,8 @@ void TVout::fill(uint8_t color) {
 
 /* Gets the Horizontal resolution of the screen
  *
- * Returns the horizonal resolution.
+ * Returns: 
+ *	The horizonal resolution.
 */
 unsigned char TVout::hres() {
 	return display.hres*8;
@@ -289,69 +298,76 @@ unsigned char TVout::get_pixel(uint8_t x, uint8_t y) {
  *		The color of the line.
  *		(see color note at the top of this file)
  */
+/* Patched to allow support for the Arduino Leonardo */
 void TVout::draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char c) {
 
 	if (x0 > display.hres*8 || y0 > display.vres || x1 > display.hres*8 || y1 > display.vres)
 		return;
-	int e;
-	signed int dx,dy,j, temp;
-	signed char s1,s2, xchange;
-	signed int x,y;
+	if (x0 == x1)
+		draw_column(x0,y0,y1,c);
+	else if (y0 == y1)
+		draw_row(y0,x0,x1,c);
+	else {
+		int e;
+		signed int dx,dy,j, temp;
+		signed char s1,s2, xchange;
+		signed int x,y;
 
-	x = x0;
-	y = y0;
+		x = x0;
+		y = y0;
 	
-	//take absolute value
-	if (x1 < x0) {
-		dx = x0 - x1;
-		s1 = -1;
-	}
-	else if (x1 == x0) {
-		dx = 0;
-		s1 = 0;
-	}
-	else {
-		dx = x1 - x0;
-		s1 = 1;
-	}
-
-	if (y1 < y0) {
-		dy = y0 - y1;
-		s2 = -1;
-	}
-	else if (y1 == y0) {
-		dy = 0;
-		s2 = 0;
-	}
-	else {
-		dy = y1 - y0;
-		s2 = 1;
-	}
-
-	xchange = 0;   
-
-	if (dy>dx) {
-		temp = dx;
-		dx = dy;
-		dy = temp;
-		xchange = 1;
-	} 
-
-	e = ((int)dy<<1) - dx;  
-	 
-	for (j=0; j<=dx; j++) {
-		sp(x,y,c);
-		 
-		if (e>=0) {
-			if (xchange==1) x = x + s1;
-			else y = y + s2;
-			e = e - ((int)dx<<1);
+		//take absolute value
+		if (x1 < x0) {
+			dx = x0 - x1;
+			s1 = -1;
 		}
-		if (xchange==1)
-			y = y + s2;
-		else
-			x = x + s1;
-		e = e + ((int)dy<<1);
+		else if (x1 == x0) {
+			dx = 0;
+			s1 = 0;
+		}
+		else {
+			dx = x1 - x0;
+			s1 = 1;
+		}
+
+		if (y1 < y0) {
+			dy = y0 - y1;
+			s2 = -1;
+		}
+		else if (y1 == y0) {
+			dy = 0;
+			s2 = 0;
+		}
+		else {
+			dy = y1 - y0;
+			s2 = 1;
+		}
+
+		xchange = 0;   
+
+		if (dy>dx) {
+			temp = dx;
+			dx = dy;
+			dy = temp;
+			xchange = 1;
+		} 
+
+		e = ((int)dy<<1) - dx;  
+	 
+		for (j=0; j<=dx; j++) {
+			sp(x,y,c);
+		 
+			if (e>=0) {
+				if (xchange==1) x = x + s1;
+				else y = y + s2;
+				e = e - ((int)dx<<1);
+			}
+			if (xchange==1)
+				y = y + s2;
+			else
+				x = x + s1;
+			e = e + ((int)dy<<1);
+		}
 	}
 } // end of draw_line
 
@@ -369,7 +385,7 @@ void TVout::draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char c) {
  *		the color of the fill.
  *		(see color note at the top of this file)
 */
-void TVout::fill_line(uint8_t line, uint16_t x0, uint16_t x1, uint8_t c) {
+void TVout::draw_row(uint8_t line, uint16_t x0, uint16_t x1, uint8_t c) {
 	uint8_t lbit, rbit;
 	
 	if (x0 == x1)
@@ -407,7 +423,60 @@ void TVout::fill_line(uint8_t line, uint16_t x0, uint16_t x1, uint8_t c) {
 			screen[x0] ^= rbit;
 		}
 	}
-} // end of fill_line
+} // end of draw_row
+
+
+/* Fill a column from one point to another
+ *
+ * Argument:
+ *	row:
+ *		The row that fill will be performed on.
+ *	y0:
+ *		edge 0 of the fill.
+ *	y1:
+ *		edge 1 of the fill.
+ *	c:
+ *		the color of the fill.
+ *		(see color note at the top of this file)
+*/
+void TVout::draw_column(uint8_t row, uint16_t y0, uint16_t y1, uint8_t c) {
+
+	unsigned char bit;
+	int byte;
+	
+	if (y0 == y1)
+		set_pixel(row,y0,c);
+	else {
+		if (y1 < y0) {
+			bit = y0;
+			y0 = y1;
+			y1 = bit;
+		}
+		bit = 0x80 >> (row&7);
+		byte = row/8 + y0*display.hres;
+		if (c == WHITE) {
+			while ( y0 <= y1) {
+				screen[byte] |= bit;
+				byte += display.hres;
+				y0++;
+			}
+		}
+		else if (c == BLACK) {
+			while ( y0 <= y1) {
+				screen[byte] &= ~bit;
+				byte += display.hres;
+				y0++;
+			}
+		}
+		else if (c == INVERT) {
+			while ( y0 <= y1) {
+				screen[byte] ^= bit;
+				byte += display.hres;
+				y0++;
+			}
+		}
+	}
+}
 
 
 /* draw a rectangle at x,y with a specified width and height
@@ -433,7 +502,7 @@ void TVout::draw_rect(uint8_t x0, uint8_t y0, uint8_t w, uint8_t h, char c, char
 	
 	if (fc != -1) {
 		for (unsigned char i = y0; i < y0+h; i++)
-			fill_line(i,x0,x0+w,fc);
+			draw_row(i,x0,x0+w,fc);
 	}
 	draw_line(x0,y0,x0+w,y0,c);
 	draw_line(x0,y0,x0,y0+h,c);
@@ -466,10 +535,12 @@ void TVout::draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char fc)
 	int	ddF_y = -2 * radius;
 	int x = 0;
 	int y = radius;
+	uint8_t pyy = y,pyx = x;
+	
 	
 	//there is a fill color
 	if (fc != -1)
-		fill_line(y0,x0-radius,x0+radius,fc);
+		draw_row(y0,x0-radius,x0+radius,fc);
 	
 	sp(x0, y0 + radius,c);
 	sp(x0, y0 - radius,c);
@@ -485,11 +556,20 @@ void TVout::draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char fc)
 		x++;
 		ddF_x += 2;
 		f += ddF_x;
-		if (fc != -1) {	//there is a fill color
-			fill_line(y0+y,x0-x,x0+x,fc);
-			fill_line(y0-y,x0-x,x0+x,fc);
-			fill_line(y0+x,x0-y,x0+y,fc);
-			fill_line(y0-x,x0-y,x0+y,fc);
+		
+		//there is a fill color
+		if (fc != -1) {
+			//prevent double draws on the same rows
+			if (pyy != y) {
+				draw_row(y0+y,x0-x,x0+x,fc);
+				draw_row(y0-y,x0-x,x0+x,fc);
+			}
+			if (pyx != x && x != y) {
+				draw_row(y0+x,x0-y,x0+y,fc);
+				draw_row(y0-x,x0-y,x0+y,fc);
+			}
+			pyy = y;
+			pyx = x;
 		}
 		sp(x0 + x, y0 + y,c);
 		sp(x0 - x, y0 + y,c);
@@ -730,7 +810,11 @@ void TVout::tone(unsigned int frequency, unsigned long duration_ms) {
 	if (frequency == 0)
 		return;
 
+#if defined(__AVR_ATmega32U4__)
+#define TIMER 0
+#else
 #define TIMER 2
+#endif
 	//this is init code
 	TCCR2A = 0;
 	TCCR2B = 0;
