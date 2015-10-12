@@ -298,6 +298,7 @@ unsigned char TVout::get_pixel(uint8_t x, uint8_t y) {
  *		The color of the line.
  *		(see color note at the top of this file)
  */
+/* Patched to allow support for the Arduino Leonardo */
 void TVout::draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char c) {
 
 	if (x0 > display.hres*8 || y0 > display.vres || x1 > display.hres*8 || y1 > display.vres)
@@ -809,7 +810,11 @@ void TVout::tone(unsigned int frequency, unsigned long duration_ms) {
 	if (frequency == 0)
 		return;
 
+#if defined(__AVR_ATmega32U4__)
+#define TIMER 0
+#else
 #define TIMER 2
+#endif
 	//this is init code
 	TCCR2A = 0;
 	TCCR2B = 0;
