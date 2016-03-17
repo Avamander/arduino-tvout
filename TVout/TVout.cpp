@@ -110,13 +110,13 @@ void TVout::fill(uint8_t color) {
 		case BLACK:
 			cursor_x = 0;
 			cursor_y = 0;
-			for (int i = 0; i < (display.hres)*display.vres; i++)
+			for (int i = 0; i < display.hres*display.vres; i++)
 				display.screen[i] = 0;
 			break;
 		case WHITE:
 			cursor_x = 0;
 			cursor_y = 0;
-			for (int i = 0; i < (display.hres)*display.vres; i++)
+			for (int i = 0; i < display.hres*display.vres; i++)
 				display.screen[i] = 0xFF;
 			break;
 		case INVERT:
@@ -302,7 +302,6 @@ unsigned char TVout::get_pixel(uint8_t x, uint8_t y) {
  */
 /* Patched to allow support for the Arduino Leonardo */
 void TVout::draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char c) {
-
 	if (x0 > display.hres*8 || y0 > display.vres || x1 > display.hres*8 || y1 > display.vres)
 		return;
 	if (x0 == x1)
@@ -501,15 +500,16 @@ void TVout::draw_column(uint8_t row, uint16_t y0, uint16_t y1, uint8_t c) {
  *		default =-1 (no fill)
 */
 void TVout::draw_rect(uint8_t x0, uint8_t y0, uint8_t w, uint8_t h, char c, char fc) {
-
+	uint8_t x1 = x0+w-1;
+	uint8_t y1 = y0+h-1;
 	if (fc != -1) {
-		for (unsigned char i = y0; i < y0+h; i++)
-			draw_row(i,x0,x0+w,fc);
+		for (unsigned char i = y0; i < y1; i++)
+			draw_row(i,x0,x1,fc);
 	}
-	draw_line(x0,y0,x0+w,y0,c);
-	draw_line(x0,y0,x0,y0+h,c);
-	draw_line(x0+w,y0,x0+w,y0+h,c);
-	draw_line(x0,y0+h,x0+w,y0+h,c);
+	draw_line(x0,y0,x1,y0,c);
+	draw_line(x0,y0,x0,y1,c);
+	draw_line(x1,y0,x1,y1,c);
+	draw_line(x0,y1,x1,y1,c);
 } // end of draw_rect
 
 
