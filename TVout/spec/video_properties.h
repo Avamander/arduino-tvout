@@ -32,36 +32,75 @@
 
 #define _CYCLES_PER_US			(F_CPU / 1000000)
 
-#define _TIME_HORZ_SYNC				4.7
-#define _TIME_VIRT_SYNC				58.85
-#define _TIME_ACTIVE				46
-#define _CYCLES_VIRT_SYNC			((_TIME_VIRT_SYNC * _CYCLES_PER_US) - 1)
-#define _CYCLES_HORZ_SYNC			((_TIME_HORZ_SYNC * _CYCLES_PER_US) - 1)
 
-//Timing settings for NTSC
-#define _NTSC_TIME_SCANLINE			63.55
-#define _NTSC_TIME_OUTPUT_START		12
 
-#define _NTSC_LINE_FRAME			262
-#define _NTSC_LINE_START_VSYNC		0
-#define _NTSC_LINE_STOP_VSYNC		3
-#define _NTSC_LINE_DISPLAY			216
-#define _NTSC_LINE_MID				((_NTSC_LINE_FRAME - _NTSC_LINE_DISPLAY)/2 + _NTSC_LINE_DISPLAY/2)
+/*
+ Analog Video Vertical Sync (NTSC): https://www.youtube.com/watch?v=NY2rIjkH1Xw
+ PAL video timing specification: http://martin.hinner.info/vga/pal.html
+ Field Synchronization of PAL System: http://martin.hinner.info/vga/pal.gif
+ Field Synchronization of NTSC System: http://martin.hinner.info/vga/ntsc.gif
+*/
+
+// Timing settings for NTSC
+#define _NTSC_LINE_FULL_FRAME		525		// lines
+#define _NTSC_LINE_FRAME			(_NTSC_LINE_FULL_FRAME / 2)		// 262 lines
+
+#define _NTSC_TIME_RENDERING_LINE	46		// µs
+#define _NTSC_LINE_DISPLAY			216		// lines
+#define _NTSC_LINE_MID				((_NTSC_LINE_FRAME - _NTSC_LINE_DISPLAY) / 2 + _NTSC_LINE_DISPLAY / 2) // lines
+
+#define _NTSC_TIME_SCANLINE			63.563	// 63.5 µs
+#define _NTSC_TIME_HSYNC_PULSE		4.7		// 4.7 µs
+#define _NTSC_TIME_OUTPUT_START		12.5	// 10.9 + 0.5 µs + ...
 
 #define _NTSC_CYCLES_SCANLINE		((_NTSC_TIME_SCANLINE * _CYCLES_PER_US) - 1)
+#define _NTSC_CYCLES_HSYNC_PULSE	((_NTSC_TIME_HSYNC_PULSE * _CYCLES_PER_US) - 1)
 #define _NTSC_CYCLES_OUTPUT_START	((_NTSC_TIME_OUTPUT_START * _CYCLES_PER_US) - 1)
 
-//Timing settings for PAL
-#define _PAL_TIME_SCANLINE			64
-#define _PAL_TIME_OUTPUT_START		12.5
+#define _NTSC_TIME_VSYNC_SCANLINE				(_NTSC_TIME_SCANLINE / 2)	// µs
+#define _NTSC_TIME_VSYNC_PRE_EQUALIZING_PULSE	2.3		// 2.3 µs
+#define _NTSC_TIME_VSYNC_PULSE					27.1	// 27.1 µs
 
-#define _PAL_LINE_FRAME				312
-#define _PAL_LINE_START_VSYNC		0
-#define _PAL_LINE_STOP_VSYNC		7
-#define _PAL_LINE_DISPLAY			260
-#define _PAL_LINE_MID				((_PAL_LINE_FRAME - _PAL_LINE_DISPLAY)/2 + _PAL_LINE_DISPLAY/2)
+#define _NTSC_CYCLES_VSYNC_SCANLINE				((_NTSC_TIME_VSYNC_SCANLINE * _CYCLES_PER_US) - 1)
+#define _NTSC_CYCLES_VSYNC_EQUALIZING_PULSE		((_NTSC_TIME_VSYNC_PRE_EQUALIZING_PULSE * _CYCLES_PER_US) - 1)
+#define _NTSC_CYCLES_VSYNC_PULSE				((_NTSC_TIME_VSYNC_PULSE * _CYCLES_PER_US) - 1)
+
+#define _NTSC_LINE_FIRSTFRAME_END		263		// 262 line#
+#define _NTSC_LINE_SECONDFRAME_START	272		// 271 line#
+
+#define _NTSC_LINE_SECONDFRAME_END		525		// 525 line#
+#define _NTSC_LINE_FIRSTFRAME_START		10		// 9 line#
+
+
+
+// Timing settings for PAL
+#define _PAL_LINE_FULL_FRAME		625		// lines
+#define _PAL_LINE_FRAME				312		// 312 lines
+
+#define _PAL_TIME_RENDERING_LINE	46		// µs
+#define _PAL_LINE_DISPLAY			260		// lines
+#define _PAL_LINE_MID				((_PAL_LINE_FRAME - _PAL_LINE_DISPLAY) / 2 + _PAL_LINE_DISPLAY / 2) // lines
+
+#define _PAL_TIME_SCANLINE			64		// 64 µs
+#define _PAL_TIME_HSYNC_PULSE		4.7		// 4.7 µs
+#define _PAL_TIME_OUTPUT_START		12.5	// 12.05 + 0.45 µs
 
 #define _PAL_CYCLES_SCANLINE		((_PAL_TIME_SCANLINE * _CYCLES_PER_US) - 1)
+#define _PAL_CYCLES_HSYNC_PULSE		((_PAL_TIME_HSYNC_PULSE * _CYCLES_PER_US) - 1)
 #define _PAL_CYCLES_OUTPUT_START	((_PAL_TIME_OUTPUT_START * _CYCLES_PER_US) - 1)
+
+#define _PAL_TIME_VSYNC_SCANLINE				(_PAL_TIME_SCANLINE / 2)	// µs
+#define _PAL_TIME_VSYNC_PRE_EQUALIZING_PULSE	2.38		// 2.35 µs
+#define _PAL_TIME_VSYNC_PULSE					27.32	// 27.3 µs
+
+#define _PAL_CYCLES_VSYNC_SCANLINE				((_PAL_TIME_VSYNC_SCANLINE * _CYCLES_PER_US) - 1)
+#define _PAL_CYCLES_VSYNC_EQUALIZING_PULSE		((_PAL_TIME_VSYNC_PRE_EQUALIZING_PULSE * _CYCLES_PER_US) - 1)
+#define _PAL_CYCLES_VSYNC_PULSE					((_PAL_TIME_VSYNC_PULSE * _CYCLES_PER_US) - 1)
+
+#define _PAL_LINE_FIRSTFRAME_END				311		// line# 310
+#define _PAL_LINE_SECONDFRAME_START				318		// line# 317
+
+#define _PAL_LINE_SECONDFRAME_END				624		// line# 622
+#define _PAL_LINE_FIRSTFRAME_START				6		// line# 5
 
 #endif

@@ -49,22 +49,25 @@ volatile long remainingToneVsyncs;
 void empty() {}
 
 void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {
-
+	
 	display.screen = scrnptr;
 	display.hres = x;
 	display.vres = y;
 	display.frames = 0;
 	
-	if (mode)
-		display.vscale_const = _PAL_LINE_DISPLAY/display.vres - 1;
-	else
-		display.vscale_const = _NTSC_LINE_DISPLAY/display.vres - 1;
+	display.vscale_const = _PAL_LINE_DISPLAY / display.vres - 1;
 	display.vscale = display.vscale_const;
 	
 	//selects the widest render method that fits in 46us
 	//as of 9/16/10 rendermode 3 will not work for resolutions lower than
 	//192(display.hres lower than 24)
-	unsigned char rmethod = (_TIME_ACTIVE*_CYCLES_PER_US)/(display.hres*8);
+	unsigned char rmethod;
+	if (mode == PAL) {
+		rmethod = (_PAL_TIME_RENDERING_LINE * _CYCLES_PER_US) / (display.hres * 8); // re: 46 µs * 16 / (16 * 8) = 5.75 ticks per pixel
+	}
+	else {
+		rmethod = (_NTSC_TIME_RENDERING_LINE * _CYCLES_PER_US) / (display.hres * 8); // re: 46 µs * 16 / (16 * 8) = 5.75 ticks per pixel
+	}
 	switch(rmethod) {
 		case 6:
 			render_line = &render_line6c;
@@ -85,35 +88,45 @@ void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {
 				render_line = &render_line3c;
 	}
 	
-
 	DDR_VID |= _BV(VID_PIN);
 	DDR_SYNC |= _BV(SYNC_PIN);
 	PORT_VID &= ~_BV(VID_PIN);
 	PORT_SYNC |= _BV(SYNC_PIN);
 	DDR_SND |= _BV(SND_PIN);	// for tone generation.
 	
-	// inverted fast pwm mode on timer 1
-	TCCR1A = _BV(COM1A1) | _BV(COM1A0) | _BV(WGM11);
+	// inverted fast pwm mode on timer 1:
+	TCCR1A = _BV(COM1A1) | _BV(COM1A0) | _BV(WGM11); 
 	TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10);
 	
-	if (mode) {
-		display.start_render = _PAL_LINE_MID - ((display.vres * (display.vscale_const+1))/2);
+	if (mode == PAL) {
 		display.output_delay = _PAL_CYCLES_OUTPUT_START;
-		display.vsync_end = _PAL_LINE_STOP_VSYNC;
 		display.lines_frame = _PAL_LINE_FRAME;
-		ICR1 = _PAL_CYCLES_SCANLINE;
-		OCR1A = _CYCLES_HORZ_SYNC;
-		}
-	else {
-		display.start_render = _NTSC_LINE_MID - ((display.vres * (display.vscale_const+1))/2) + 8;
-		display.output_delay = _NTSC_CYCLES_OUTPUT_START;
-		display.vsync_end = _NTSC_LINE_STOP_VSYNC;
-		display.lines_frame = _NTSC_LINE_FRAME;
-		ICR1 = _NTSC_CYCLES_SCANLINE;
-		OCR1A = _CYCLES_HORZ_SYNC;
+		
+		display.first_frame_start_render_line = _PAL_LINE_MID - (display.vres * (display.vscale_const + 1)) / 2;
+		display.first_frame_end_render_line = display.first_frame_start_render_line + (display.vres * (display.vscale_const + 1));
+		display.second_frame_start_render_line = display.lines_frame + display.first_frame_start_render_line;
+		display.second_frame_end_render_line = display.lines_frame + display.first_frame_end_render_line;
+		
+		ICR1  = _PAL_CYCLES_VSYNC_SCANLINE;
+		OCR1A = _PAL_CYCLES_VSYNC_EQUALIZING_PULSE;
 	}
-	display.scanLine = display.lines_frame+1;
-	line_handler = &vsync_line;
+	else { // NTSC
+		display.output_delay = _NTSC_CYCLES_OUTPUT_START;
+		display.lines_frame = _NTSC_LINE_FRAME;
+
+		display.first_frame_start_render_line = _NTSC_LINE_MID - (display.vres * (display.vscale_const + 1)) / 2;
+		display.first_frame_end_render_line = display.first_frame_start_render_line + (display.vres * (display.vscale_const + 1));
+		display.second_frame_start_render_line = display.lines_frame + display.first_frame_start_render_line;
+		display.second_frame_end_render_line = display.lines_frame + display.first_frame_end_render_line;
+		
+		ICR1  = _NTSC_CYCLES_VSYNC_SCANLINE;
+		OCR1A = _NTSC_CYCLES_VSYNC_EQUALIZING_PULSE;
+	}
+	
+	display.scanLine = 0;
+	display.vsyncScanLine = 0;
+	line_handler = &first_frame_vsync_lines;
+	
 	TIMSK1 = _BV(TOIE1);
 	sei();
 }
@@ -124,62 +137,207 @@ ISR(TIMER1_OVF_vect) {
 	line_handler();
 }
 
-void blank_line() {
+void first_frame_vsync_lines() {
+	display.vsyncScanLine++;
+	
+	if (display.lines_frame == _PAL_LINE_FRAME) {
 		
-	if ( display.scanLine == display.start_render) {
-		renderLine = 0;
-		display.vscale = display.vscale_const;
-		line_handler = &active_line;
+		if (display.vsyncScanLine == 5) {
+			OCR1A = _PAL_CYCLES_VSYNC_PULSE;
+		}
+		else if (display.vsyncScanLine == 10) {
+			OCR1A = _PAL_CYCLES_VSYNC_EQUALIZING_PULSE;
+		}
+		else if (display.vsyncScanLine == 15) {
+			ICR1  = _PAL_CYCLES_SCANLINE;
+			OCR1A = _PAL_CYCLES_HSYNC_PULSE;
+		
+			display.scanLine = _PAL_LINE_FIRSTFRAME_START;
+			line_handler = &first_frame_blank_line;
+		}
 	}
-	else if (display.scanLine == display.lines_frame) {
-		line_handler = &vsync_line;
-		vbi_hook();
+	else {
+		if (display.vsyncScanLine == 6) {
+			OCR1A = _NTSC_CYCLES_VSYNC_PULSE;
+		}
+		else if (display.vsyncScanLine == 12) {
+			OCR1A = _NTSC_CYCLES_VSYNC_EQUALIZING_PULSE;
+		}
+		else if (display.vsyncScanLine == 18) {
+			ICR1  = _NTSC_CYCLES_SCANLINE;
+			OCR1A = _NTSC_CYCLES_HSYNC_PULSE;
+
+			display.scanLine = _NTSC_LINE_FIRSTFRAME_START;
+			line_handler = &first_frame_blank_line;
+		}
+	}
+}
+
+void first_frame_blank_line() {
+	display.scanLine++;
+	
+	if (display.lines_frame == _PAL_LINE_FRAME) {
+		if (display.scanLine == _PAL_LINE_FIRSTFRAME_END) {
+			ICR1  = _PAL_CYCLES_VSYNC_SCANLINE;
+			OCR1A = _PAL_CYCLES_VSYNC_EQUALIZING_PULSE;
+
+			line_handler = &second_frame_vsync_lines;
+			display.vsyncScanLine = 0;
+		}
+	}
+	else {
+		if (display.scanLine == (_NTSC_LINE_FIRSTFRAME_END - 1)) {
+			ICR1  = _NTSC_CYCLES_VSYNC_SCANLINE;
+		}
+		else if (display.scanLine == _NTSC_LINE_FIRSTFRAME_END) {
+			OCR1A = _NTSC_CYCLES_VSYNC_EQUALIZING_PULSE;
+		
+			line_handler = &second_frame_vsync_lines;
+			display.vsyncScanLine = 0;
+		}
 	}
 	
-	display.scanLine++;
-}
-
-void active_line() {
-	wait_until(display.output_delay);
-	render_line();
-	if (!display.vscale) {
+	if (display.scanLine == display.first_frame_start_render_line) {
+		renderLine = 0;
 		display.vscale = display.vscale_const;
-		renderLine += display.hres;
-	}
-	else
-		display.vscale--;
+		line_handler = &first_frame_active_line;
 		
-	if ((display.scanLine + 1) == (int)(display.start_render + (display.vres*(display.vscale_const+1))))
-		line_handler = &blank_line;
-		
-	display.scanLine++;
-}
-
-void vsync_line() {
-	if (display.scanLine >= display.lines_frame) {
-		OCR1A = _CYCLES_VIRT_SYNC;
-		display.scanLine = 0;
-		display.frames++;
-
-		if (remainingToneVsyncs != 0)
-		{
+		if (remainingToneVsyncs != 0) {
 			if (remainingToneVsyncs > 0)
 			{
 				remainingToneVsyncs--;
 			}
-
-		} else
-		{
+		}
+		else {
 			TCCR2B = 0; //stop the tone
  			PORTB &= ~(_BV(SND_PIN));
 		}
+		
+		vbi_hook();
+	}
+}
 
-	}
-	else if (display.scanLine == display.vsync_end) {
-		OCR1A = _CYCLES_HORZ_SYNC;
-		line_handler = &blank_line;
-	}
+void first_frame_active_line() {
 	display.scanLine++;
+	
+	wait_until(display.output_delay);
+	render_line();
+	
+	if (display.vscale == 0) {
+		display.vscale = display.vscale_const;
+		renderLine += display.hres;
+	}
+	else {
+		display.vscale--;
+	}
+		
+	if (display.scanLine ==  display.first_frame_end_render_line) {
+		display.frames++;
+		line_handler = &first_frame_blank_line;
+	}
+}
+
+void second_frame_vsync_lines() {
+	display.vsyncScanLine++;
+	
+	if (display.lines_frame == _PAL_LINE_FRAME) {
+		
+		if (display.vsyncScanLine == 5) {
+			OCR1A = _PAL_CYCLES_VSYNC_PULSE;
+		}
+		else if (display.vsyncScanLine == 10) {
+			OCR1A = _PAL_CYCLES_VSYNC_EQUALIZING_PULSE;
+		}
+		else if (display.vsyncScanLine == 14) {
+			ICR1  = _PAL_CYCLES_SCANLINE;
+			OCR1A = _PAL_CYCLES_HSYNC_PULSE;
+		
+			display.scanLine = _PAL_LINE_SECONDFRAME_START;
+			line_handler = &second_frame_blank_line;
+		}
+	}
+	else {
+		
+		if (display.vsyncScanLine == 6) {
+			OCR1A = _NTSC_CYCLES_VSYNC_PULSE;
+		}
+		else if (display.vsyncScanLine == 12) {
+			OCR1A = _NTSC_CYCLES_VSYNC_EQUALIZING_PULSE;
+		}
+		else if (display.vsyncScanLine == 17) {
+			ICR1  = _NTSC_CYCLES_SCANLINE;
+		}
+		else if (display.vsyncScanLine == 18) {
+			OCR1A = _NTSC_CYCLES_HSYNC_PULSE;
+		
+			display.scanLine = _NTSC_LINE_SECONDFRAME_START;
+			line_handler = &second_frame_blank_line;
+		}
+	}
+}
+
+void second_frame_blank_line() {
+	display.scanLine++;
+	
+	if (display.lines_frame == _PAL_LINE_FRAME) {
+		if (display.scanLine == (_PAL_LINE_SECONDFRAME_END - 1)) {
+			ICR1  = _PAL_CYCLES_VSYNC_SCANLINE;
+		}
+		else if (display.scanLine == _PAL_LINE_SECONDFRAME_END) {
+			OCR1A = _PAL_CYCLES_VSYNC_EQUALIZING_PULSE;
+		
+			line_handler = &first_frame_vsync_lines;
+			display.vsyncScanLine = 0;
+		}
+	}
+	else {
+		if (display.scanLine == _NTSC_LINE_SECONDFRAME_END) {
+			ICR1  = _NTSC_CYCLES_VSYNC_SCANLINE;
+			OCR1A = _NTSC_CYCLES_VSYNC_EQUALIZING_PULSE;
+		
+			line_handler = &first_frame_vsync_lines;
+			display.vsyncScanLine = 0;
+		}
+	}
+	
+	if (display.scanLine == display.second_frame_start_render_line) {
+		renderLine = 0;
+		display.vscale = display.vscale_const;
+		line_handler = &second_frame_active_line;
+		
+		if (remainingToneVsyncs != 0) {
+			if (remainingToneVsyncs > 0)
+			{
+				remainingToneVsyncs--;
+			}
+		}
+		else {
+			TCCR2B = 0; //stop the tone
+ 			PORTB &= ~(_BV(SND_PIN));
+		}
+		
+		vbi_hook();
+	}
+}
+
+void second_frame_active_line() {
+	display.scanLine++;
+	
+	wait_until(display.output_delay);
+	render_line();
+	
+	if (display.vscale == 0) {
+		display.vscale = display.vscale_const;
+		renderLine += display.hres;
+	}
+	else {
+		display.vscale--;
+	}
+		
+	if (display.scanLine ==  display.second_frame_end_render_line) {
+		display.frames++;
+		line_handler = &second_frame_blank_line;
+	}
 }
 
 
