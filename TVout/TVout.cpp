@@ -180,7 +180,7 @@ void TVout::delay(unsigned int x) {
  *		The number of frames to delay for.
  */
 void TVout::delay_frame(unsigned int x) {
-	int stop_line = (int)(display.start_render + (display.vres*(display.vscale_const+1)))+1;
+	int stop_line = (int)(display.first_frame_start_render_line + (display.vres * (display.vscale_const + 1))) + 1;
 	while (x) {
 		while (display.scanLine != stop_line);
 		while (display.scanLine == stop_line);
@@ -238,7 +238,10 @@ void TVout::force_outstart(uint8_t time) {
  */
 void TVout::force_linestart(uint8_t line) {
 	delay_frame(1);
-	display.start_render = line;
+	display.first_frame_start_render_line = line;
+	display.first_frame_end_render_line = display.first_frame_start_render_line + (display.vres * (display.vscale_const + 1));
+	display.second_frame_start_render_line = display.lines_frame + display.first_frame_start_render_line;
+	display.second_frame_end_render_line = display.lines_frame + display.first_frame_end_render_line;
 }
 
 
