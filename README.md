@@ -8,22 +8,30 @@ Currently the output is NTSC or PAL at a resolution of 128x96 by default. The li
 
 There are some timing issues with the m1284p, may be related to sanguino core.
 
-```
-MCU         SYNC	VIDEO	AUDIO	Arduino	        SYNC	VIDEO	  AUDIO
-m168,m328	B 1	    D 7	    B 3	    NG,Decimila,UNO	9	    7	      11
-m1280,m2560	B 5	    A 7	    B 4	    Mega            11	    A7(D29)	  10
-m644,m1284p	D 5	    A 7	    D 7	    sanguino        13	    A7(D24)	  8
-m32u4       B 5	    B 4	    B 7	    Leonardo        9       8         11
-AT90USB1286	B 5	    F 7	    B 4	    --	            --	    --	      --
-```
-
 ##Connections
 
-SYNC is on OCR1A and AUDIO is on OCR2A (except on the Arduino Leonardo, where AUDIO is on OCR0A)
+```
+MCU         SYNCOUT	AUDIOOUT	VIDEO    VSYNCIN CSYNCIN
+m168,m328	PB1	    PB3	        PD7      INT0    ICP1
+m1280,m2560	B 5	    B 4	        A7       INT0    ICP1
+m644,m1284p	D 5	    D 7	        A7
+m32u4       B 5	    B 7	        B4
+AT90USB1286	B 5	    B 4	        F7
+
+Arduino	        SYNCOUT	  AUDIOOUT	VIDEO    VSYNCIN CSYNCIN
+NG,Decimila,UNO	9	      11	    7        2       8
+Mega            11	      10	    A7(D29)  21
+sanguino        13	      8	        A7(D24)
+Leonardo        9         11        8
+Nano            D9        D11       D7       D2      D8
+```
+
+SYNCOUT is on OCR1A and AUDIOOUT is on OCR2A (except on the Arduino Leonardo, where AUDIOOUT is on OCR0A)
 
 There are some timing issues with the m1284p, may be related to sanguino core.
 
-On NG, Decimila, UNO and Nano the sync is pin 9, video on 7 and audio on 11. On Mega2560	sync is pin 11, video is on A7(D29)	and audio is on pin 10.
+On NG, Decimila, UNO and Nano the SYNCOUT is pin 9, video on 7 and AUDIOOUT on 11.
+On Mega2560	SYNCOUT is pin 11, video is on A7(D29) and AUDIOOUT is on pin 10.
 
 
 ##Examples

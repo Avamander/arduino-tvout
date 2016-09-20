@@ -26,8 +26,12 @@
 #ifndef VIDEO_GEN_H
 #define VIDEO_GEN_H
 
-#define PAL						1
 #define	NTSC					0
+#define _NTSC					0
+#define PAL						1
+#define _PAL					1
+#define OVERLAY					2
+#define _OVERLAY				2
 
 typedef struct {
 	volatile int scanLine;
@@ -59,6 +63,8 @@ void first_frame_active_line();
 void second_frame_vsync_lines();
 void second_frame_blank_line();
 void second_frame_active_line();
+void overlay_blank_line();
+void overlay_active_line();
 void empty();
 
 //tone generation properties

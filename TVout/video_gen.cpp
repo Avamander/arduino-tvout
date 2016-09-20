@@ -49,15 +49,17 @@ volatile long remainingToneVsyncs;
 void empty() {}
 
 void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {
-	
 	display.screen = scrnptr;
 	display.hres = x;
 	display.vres = y;
 	display.frames = 0;
-	
-	display.vscale_const = _PAL_LINE_DISPLAY / display.vres - 1;
+
+	if (mode & PAL)
+		display.vscale_const = _PAL_LINE_DISPLAY/display.vres - 1;
+	else
+		display.vscale_const = _NTSC_LINE_DISPLAY/display.vres - 1;
 	display.vscale = display.vscale_const;
-	
+
 	//selects the widest render method that fits in 46us
 	//as of 9/16/10 rendermode 3 will not work for resolutions lower than
 	//192(display.hres lower than 24)
@@ -87,26 +89,21 @@ void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {
 			else
 				render_line = &render_line3c;
 	}
-	
 	DDR_VID |= _BV(VID_PIN);
 	DDR_SYNC |= _BV(SYNC_PIN);
 	PORT_VID &= ~_BV(VID_PIN);
 	PORT_SYNC |= _BV(SYNC_PIN);
 	DDR_SND |= _BV(SND_PIN);	// for tone generation.
-	
-	// inverted fast pwm mode on timer 1:
-	TCCR1A = _BV(COM1A1) | _BV(COM1A0) | _BV(WGM11); 
-	TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10);
-	
-	if (mode == PAL) {
+
+	if (mode & PAL) {
 		display.output_delay = _PAL_CYCLES_OUTPUT_START;
 		display.lines_frame = _PAL_LINE_FRAME;
-		
+
 		display.first_frame_start_render_line = _PAL_LINE_MID - (display.vres * (display.vscale_const + 1)) / 2;
 		display.first_frame_end_render_line = display.first_frame_start_render_line + (display.vres * (display.vscale_const + 1));
 		display.second_frame_start_render_line = display.lines_frame + display.first_frame_start_render_line;
 		display.second_frame_end_render_line = display.lines_frame + display.first_frame_end_render_line;
-		
+
 		ICR1  = _PAL_CYCLES_VSYNC_SCANLINE;
 		OCR1A = _PAL_CYCLES_VSYNC_EQUALIZING_PULSE;
 	}
@@ -118,30 +115,70 @@ void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {
 		display.first_frame_end_render_line = display.first_frame_start_render_line + (display.vres * (display.vscale_const + 1));
 		display.second_frame_start_render_line = display.lines_frame + display.first_frame_start_render_line;
 		display.second_frame_end_render_line = display.lines_frame + display.first_frame_end_render_line;
-		
+
 		ICR1  = _NTSC_CYCLES_VSYNC_SCANLINE;
 		OCR1A = _NTSC_CYCLES_VSYNC_EQUALIZING_PULSE;
 	}
-	
-	display.scanLine = 0;
+
 	display.vsyncScanLine = 0;
-	line_handler = &first_frame_vsync_lines;
-	
-	TIMSK1 = _BV(TOIE1);
+	display.scanLine = 0;
+
+	if (mode & OVERLAY) {
+		line_handler = &empty;
+		// Enable timer1.  ICES0 is set to 0 for falling edge detection on input capture pin.
+		TCCR1A = 0;
+		TCCR1B = _BV(CS10);
+
+		// Enable input capture interrupt
+		TIMSK1 |= _BV(ICIE1);
+
+		// Enable external interrupt INT0 on pin 2 with falling edge.
+		EIMSK = _BV(INT0);
+		EICRA = _BV(ISC11);
+	} else {
+		line_handler = &first_frame_vsync_lines;
+		// inverted fast pwm mode on timer 1
+		TCCR1A = _BV(COM1A1) | _BV(COM1A0) | _BV(WGM11);
+		TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10);
+		TIMSK1 = _BV(TOIE1);
+	}
+
 	sei();
 }
 
-// render a line
+// render a line when we get a line timer overflow (generated sync mode)
 ISR(TIMER1_OVF_vect) {
 	hbi_hook();
 	line_handler();
 }
 
+// render a line when we get a horizonal sync pulse (overlay mode)
+ISR(TIMER1_CAPT_vect) {
+  TCNT1 -= ICR1;
+  hbi_hook();
+  line_handler();
+}
+
+// reset the scan line when we get a vertical sync (overlay mode)
+ISR(INT0_vect) {
+	if (display.scanLine != 0) {
+		display.frames++;
+		if (remainingToneVsyncs > 0) {
+			if (--remainingToneVsyncs == 0) {
+				TCCR2B = 0; //stop the tone
+				PORTB &= ~(_BV(SND_PIN));
+			}
+		}
+	}
+	display.scanLine = 0;
+	line_handler = &overlay_blank_line;
+}
+
 void first_frame_vsync_lines() {
 	display.vsyncScanLine++;
-	
+
 	if (display.lines_frame == _PAL_LINE_FRAME) {
-		
+
 		if (display.vsyncScanLine == 5) {
 			OCR1A = _PAL_CYCLES_VSYNC_PULSE;
 		}
@@ -151,7 +188,7 @@ void first_frame_vsync_lines() {
 		else if (display.vsyncScanLine == 15) {
 			ICR1  = _PAL_CYCLES_SCANLINE;
 			OCR1A = _PAL_CYCLES_HSYNC_PULSE;
-		
+
 			display.scanLine = _PAL_LINE_FIRSTFRAME_START;
 			line_handler = &first_frame_blank_line;
 		}
@@ -175,7 +212,7 @@ void first_frame_vsync_lines() {
 
 void first_frame_blank_line() {
 	display.scanLine++;
-	
+
 	if (display.lines_frame == _PAL_LINE_FRAME) {
 		if (display.scanLine == _PAL_LINE_FIRSTFRAME_END) {
 			ICR1  = _PAL_CYCLES_VSYNC_SCANLINE;
@@ -191,17 +228,17 @@ void first_frame_blank_line() {
 		}
 		else if (display.scanLine == _NTSC_LINE_FIRSTFRAME_END) {
 			OCR1A = _NTSC_CYCLES_VSYNC_EQUALIZING_PULSE;
-		
+
 			line_handler = &second_frame_vsync_lines;
 			display.vsyncScanLine = 0;
 		}
 	}
-	
+
 	if (display.scanLine == display.first_frame_start_render_line) {
 		renderLine = 0;
 		display.vscale = display.vscale_const;
 		line_handler = &first_frame_active_line;
-		
+
 		if (remainingToneVsyncs != 0) {
 			if (remainingToneVsyncs > 0)
 			{
@@ -212,17 +249,17 @@ void first_frame_blank_line() {
 			TCCR2B = 0; //stop the tone
  			PORTB &= ~(_BV(SND_PIN));
 		}
-		
+
 		vbi_hook();
 	}
 }
 
 void first_frame_active_line() {
 	display.scanLine++;
-	
+
 	wait_until(display.output_delay);
 	render_line();
-	
+
 	if (display.vscale == 0) {
 		display.vscale = display.vscale_const;
 		renderLine += display.hres;
@@ -230,7 +267,7 @@ void first_frame_active_line() {
 	else {
 		display.vscale--;
 	}
-		
+
 	if (display.scanLine ==  display.first_frame_end_render_line) {
 		display.frames++;
 		line_handler = &first_frame_blank_line;
@@ -239,9 +276,9 @@ void first_frame_active_line() {
 
 void second_frame_vsync_lines() {
 	display.vsyncScanLine++;
-	
+
 	if (display.lines_frame == _PAL_LINE_FRAME) {
-		
+
 		if (display.vsyncScanLine == 5) {
 			OCR1A = _PAL_CYCLES_VSYNC_PULSE;
 		}
@@ -251,13 +288,13 @@ void second_frame_vsync_lines() {
 		else if (display.vsyncScanLine == 14) {
 			ICR1  = _PAL_CYCLES_SCANLINE;
 			OCR1A = _PAL_CYCLES_HSYNC_PULSE;
-		
+
 			display.scanLine = _PAL_LINE_SECONDFRAME_START;
 			line_handler = &second_frame_blank_line;
 		}
 	}
 	else {
-		
+
 		if (display.vsyncScanLine == 6) {
 			OCR1A = _NTSC_CYCLES_VSYNC_PULSE;
 		}
@@ -269,7 +306,7 @@ void second_frame_vsync_lines() {
 		}
 		else if (display.vsyncScanLine == 18) {
 			OCR1A = _NTSC_CYCLES_HSYNC_PULSE;
-		
+
 			display.scanLine = _NTSC_LINE_SECONDFRAME_START;
 			line_handler = &second_frame_blank_line;
 		}
@@ -278,14 +315,14 @@ void second_frame_vsync_lines() {
 
 void second_frame_blank_line() {
 	display.scanLine++;
-	
+
 	if (display.lines_frame == _PAL_LINE_FRAME) {
 		if (display.scanLine == (_PAL_LINE_SECONDFRAME_END - 1)) {
 			ICR1  = _PAL_CYCLES_VSYNC_SCANLINE;
 		}
 		else if (display.scanLine == _PAL_LINE_SECONDFRAME_END) {
 			OCR1A = _PAL_CYCLES_VSYNC_EQUALIZING_PULSE;
-		
+
 			line_handler = &first_frame_vsync_lines;
 			display.vsyncScanLine = 0;
 		}
@@ -294,17 +331,17 @@ void second_frame_blank_line() {
 		if (display.scanLine == _NTSC_LINE_SECONDFRAME_END) {
 			ICR1  = _NTSC_CYCLES_VSYNC_SCANLINE;
 			OCR1A = _NTSC_CYCLES_VSYNC_EQUALIZING_PULSE;
-		
+
 			line_handler = &first_frame_vsync_lines;
 			display.vsyncScanLine = 0;
 		}
 	}
-	
+
 	if (display.scanLine == display.second_frame_start_render_line) {
 		renderLine = 0;
 		display.vscale = display.vscale_const;
 		line_handler = &second_frame_active_line;
-		
+
 		if (remainingToneVsyncs != 0) {
 			if (remainingToneVsyncs > 0)
 			{
@@ -313,19 +350,19 @@ void second_frame_blank_line() {
 		}
 		else {
 			TCCR2B = 0; //stop the tone
- 			PORTB &= ~(_BV(SND_PIN));
+			PORTB &= ~(_BV(SND_PIN));
 		}
-		
+
 		vbi_hook();
 	}
 }
 
 void second_frame_active_line() {
 	display.scanLine++;
-	
+
 	wait_until(display.output_delay);
 	render_line();
-	
+
 	if (display.vscale == 0) {
 		display.vscale = display.vscale_const;
 		renderLine += display.hres;
@@ -333,13 +370,46 @@ void second_frame_active_line() {
 	else {
 		display.vscale--;
 	}
-		
+
 	if (display.scanLine ==  display.second_frame_end_render_line) {
 		display.frames++;
 		line_handler = &second_frame_blank_line;
 	}
 }
 
+
+void overlay_blank_line() {
+	display.scanLine++;
+
+	if ( display.scanLine == display.first_frame_start_render_line) {
+		renderLine = 0;
+		display.vscale = display.vscale_const;
+		line_handler = &overlay_active_line;
+	}
+	else if (display.scanLine > display.first_frame_end_render_line) {
+		line_handler = &empty;
+		vbi_hook();
+	}
+}
+
+void overlay_active_line() {
+	display.scanLine++;
+
+	wait_until(display.output_delay);
+	render_line();
+
+	if (display.vscale == 0) {
+		display.vscale = display.vscale_const;
+		renderLine += display.hres;
+	}
+	else {
+		display.vscale--;
+	}
+
+	if (display.scanLine == display.first_frame_end_render_line) {
+		line_handler = &overlay_blank_line;
+	}
+}
 
 static void inline wait_until(uint8_t time) {
 	__asm__ __volatile__ (
@@ -354,7 +424,7 @@ static void inline wait_until(uint8_t time) {
 			"breq	102f\n\t"
 			"rjmp	102f\n"
 		"101:\n\t"
-			"nop\n" 
+			"nop\n"
 		"102:\n"
 		:
 		: [time] "a" (time),
@@ -369,7 +439,7 @@ void render_line6c() {
 		"ADC	r27,r29\n\t"
 		//save PORTB
 		"svprt	%[port]\n\t"
-		
+
 		"rjmp	enter6\n"
 	"loop6:\n\t"
 		"bst	__tmp_reg__,0\n\t"			//8
@@ -402,7 +472,7 @@ void render_line6c() {
 		"delay2\n\t"
 		"bst	__tmp_reg__,0\n\t"			//8
 		"o1bs	%[port]\n"
-		
+
 		"svprt	%[port]\n\t"
 		BST_HWS
 		"o1bs	%[port]\n\t"
@@ -423,7 +493,7 @@ void render_line5c() {
 		"ADC	r27,r29\n\t"
 		//save PORTB
 		"svprt	%[port]\n\t"
-		
+
 		"rjmp	enter5\n"
 	"loop5:\n\t"
 		"bst	__tmp_reg__,0\n\t"			//8
@@ -455,7 +525,7 @@ void render_line5c() {
 		"delay1\n\t"
 		"bst	__tmp_reg__,0\n\t"			//8
 		"o1bs	%[port]\n"
-		
+
 		"svprt	%[port]\n\t"
 		BST_HWS
 		"o1bs	%[port]\n\t"
@@ -474,7 +544,7 @@ void render_line4c() {
 	__asm__ __volatile__ (
 		"ADD	r26,r28\n\t"
 		"ADC	r27,r29\n\t"
-		
+
 		"rjmp	enter4\n"
 	"loop4:\n\t"
 		"lsl	__tmp_reg__\n\t"			//8
@@ -547,10 +617,10 @@ void render_line3c() {
 		"lsl	__tmp_reg__\n\t"
 		"out	%[port],__tmp_reg__\n\t"	//7
 	".endm\n\t"
-	
+
 		"ADD	r26,r28\n\t"
 		"ADC	r27,r29\n\t"
-		
+
 		"cpi	%[hres],30\n\t"		//615
 		"breq	skip0\n\t"
 		"cpi	%[hres],29\n\t"
@@ -614,7 +684,7 @@ void render_line3c() {
 		"byteshift\n\t"	//28
 		"byteshift\n\t"	//29
 		"byteshift\n\t"	//30
-		
+
 		"delay2\n\t"
 		"cbi	%[port],7\n\t"
 		:

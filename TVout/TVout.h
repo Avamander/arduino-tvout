@@ -42,11 +42,6 @@ application as possible.
 #include "spec/video_properties.h"
 
 // macros for readability when selecting mode.
-#define PAL						1
-#define	NTSC					0
-#define _PAL					1
-#define _NTSC					0
-
 #define WHITE					1
 #define BLACK					0
 #define INVERT					2
@@ -72,36 +67,38 @@ TVout.cpp contains a brief expenation of each function.
 class TVout {
 public:
 	uint8_t * screen;
-	
+
 	char begin(uint8_t mode);
 	char begin(uint8_t mode, uint8_t x, uint8_t y);
-	
+	void end();
+
 	//accessor functions
 	unsigned char hres();
 	unsigned char vres();
 	char char_line();
-	
+
 	//flow control functions
 	void delay(unsigned int x);
 	void delay_frame(unsigned int x);
 	unsigned long millis();
-	
+
 	//override setup functions
 	void force_vscale(char sfactor);
 	void force_outstart(uint8_t time);
 	void force_linestart(uint8_t line);
-	
+
 	//basic rendering functions
 	void set_pixel(uint8_t x, uint8_t y, char c);
 	unsigned char get_pixel(uint8_t x, uint8_t y);
 	void fill(uint8_t color);
 	void shift(uint8_t distance, uint8_t direction);
 	void draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char c);
-	void fill_line(uint8_t line, uint16_t x0, uint16_t x1, uint8_t c);
-	void draw_rect(uint8_t x0, uint8_t y0, uint8_t w, uint8_t h, char c, char fc = -1); 
+	void draw_row(uint8_t line, uint16_t x0, uint16_t x1, uint8_t c);
+	void draw_column(uint8_t row, uint16_t y0, uint16_t y1, uint8_t c);
+	void draw_rect(uint8_t x0, uint8_t y0, uint8_t w, uint8_t h, char c, char fc = -1);
 	void draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char fc = -1);
 	void bitmap(uint8_t x, uint8_t y, const unsigned char * bmp, uint16_t i = 0, uint8_t width = 0, uint8_t lines = 0);
-	
+
 	//hook setup functions
 	void set_vbi_hook(void (*func)());
 	void set_hbi_hook(void (*func)());
@@ -110,7 +107,7 @@ public:
 	void tone(unsigned int frequency, unsigned long duration_ms);
 	void tone(unsigned int frequency);
 	void noTone();
-	
+
 //The following function definitions can be found in TVoutPrint.cpp
 //printing functions
 	void print_char(uint8_t x, uint8_t y, unsigned char c);
@@ -129,7 +126,7 @@ public:
     void print(long, int = DEC);
     void print(unsigned long, int = DEC);
     void print(double, int = 2);
-	
+
 	void print(uint8_t, uint8_t, const char[]);
 	void print(uint8_t, uint8_t, char, int = BYTE);
 	void print(uint8_t, uint8_t, unsigned char, int = BYTE);
@@ -138,6 +135,16 @@ public:
 	void print(uint8_t, uint8_t, long, int = DEC);
 	void print(uint8_t, uint8_t, unsigned long, int = DEC);
 	void print(uint8_t, uint8_t, double, int = 2);
+
+	void println(uint8_t, uint8_t, const char[]);
+    void println(uint8_t, uint8_t, char, int = BYTE);
+    void println(uint8_t, uint8_t, unsigned char, int = BYTE);
+    void println(uint8_t, uint8_t, int, int = DEC);
+    void println(uint8_t, uint8_t, unsigned int, int = DEC);
+    void println(uint8_t, uint8_t, long, int = DEC);
+    void println(uint8_t, uint8_t, unsigned long, int = DEC);
+    void println(uint8_t, uint8_t, double, int = 2);
+    void println(uint8_t, uint8_t);
 
     void println(const char[]);
     void println(char, int = BYTE);
@@ -148,18 +155,18 @@ public:
     void println(unsigned long, int = DEC);
     void println(double, int = 2);
     void println(void);
-	
+
 	void printPGM(const char[]);
 	void printPGM(uint8_t, uint8_t, const char[]);
-	
+
 private:
 	uint8_t cursor_x,cursor_y;
 	const unsigned char * font;
-	
+
 	void inc_txtline();
     void printNumber(unsigned long, uint8_t);
     void printFloat(double, uint8_t);
 };
 
-static void inline sp(unsigned char x, unsigned char y, char c); 
+static void inline sp(unsigned char x, unsigned char y, char c);
 #endif
