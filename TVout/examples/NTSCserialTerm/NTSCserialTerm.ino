@@ -6,7 +6,7 @@ TVout TV;
 pollserial pserial;
 
 void setup()  {
-  TV.begin(_NTSC,184,72);
+  TV.begin(NTSC,184,72);
   TV.select_font(font6x8);
   TV.println("Serial Terminal");
   TV.println("-- Version 0.1 --");

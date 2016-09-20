@@ -7,7 +7,7 @@ unsigned char x,y;
 void setup()  {
   x=0;
   y=0;
-  TV.begin(NTSC);	//for devices with only 1k sram(m168) use TV.begin(_NTSC,128,56)
+  TV.begin(NTSC|OVERLAY);	//for devices with only 1k sram(m168) use TV.begin(_NTSC,128,56)
   TV.select_font(font6x8);
 }
 
@@ -25,7 +25,7 @@ void loop() {
   }
   TV.delay(1000);
   TV.clear_screen();
-  TV.println("Fill the Screen\nPixel by Pixel");
+  TV.println(F("Fill the Screen\nPixel by Pixel"));
   TV.delay(1000);
   TV.clear_screen();
   for(x=0;x<TV.hres();x++){
@@ -35,7 +35,7 @@ void loop() {
   }
   TV.delay(1000);
   TV.clear_screen();
-  TV.print("Draw some lines");
+  TV.print(F("Draw some lines"));
   TV.delay(1000);
   x = TV.hres() - 1;
   for(y=0;y<TV.vres();y++){
