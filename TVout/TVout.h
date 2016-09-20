@@ -116,9 +116,11 @@ public:
 
     void write(uint8_t);
     void write(const char *str);
+	void write(const class __FlashStringHelper *);
     void write(const uint8_t *buffer, uint8_t size);
 
     void print(const char[]);
+	void print(const class __FlashStringHelper *);
     void print(char, int = BYTE);
     void print(unsigned char, int = BYTE);
     void print(int, int = DEC);
@@ -128,6 +130,7 @@ public:
     void print(double, int = 2);
 
 	void print(uint8_t, uint8_t, const char[]);
+	void print(uint8_t, uint8_t, const class __FlashStringHelper *);
 	void print(uint8_t, uint8_t, char, int = BYTE);
 	void print(uint8_t, uint8_t, unsigned char, int = BYTE);
 	void print(uint8_t, uint8_t, int, int = DEC);
@@ -137,6 +140,7 @@ public:
 	void print(uint8_t, uint8_t, double, int = 2);
 
 	void println(uint8_t, uint8_t, const char[]);
+	void println(uint8_t, uint8_t, const class __FlashStringHelper *);
     void println(uint8_t, uint8_t, char, int = BYTE);
     void println(uint8_t, uint8_t, unsigned char, int = BYTE);
     void println(uint8_t, uint8_t, int, int = DEC);
@@ -147,6 +151,7 @@ public:
     void println(uint8_t, uint8_t);
 
     void println(const char[]);
+	void println(const class __FlashStringHelper *);
     void println(char, int = BYTE);
     void println(unsigned char, int = BYTE);
     void println(int, int = DEC);

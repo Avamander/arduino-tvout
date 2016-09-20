@@ -53,6 +53,17 @@ void TVout::write(const char *str)
 }
 
 /* default implementation: may be overridden */
+void TVout::write(const __FlashStringHelper *str)
+{
+	const char PROGMEM *p = (const char PROGMEM *)str;
+	char c;
+	while ((c = pgm_read_byte(p))) {
+		p++;
+		write(c);
+	}
+}
+
+/* default implementation: may be overridden */
 void TVout::write(const uint8_t *buffer, uint8_t size)
 {
   while (size--)
@@ -92,6 +103,11 @@ void TVout::write(uint8_t c) {
 void TVout::print(const char str[])
 {
   write(str);
+}
+
+void TVout::print(const __FlashStringHelper *str)
+{
+	write(str);
 }
 
 void TVout::print(char c, int base)
@@ -143,13 +159,19 @@ void TVout::print(double n, int digits)
 void TVout::println(void)
 {
   print('\r');
-  print('\n');  
+  print('\n');
 }
 
 void TVout::println(const char c[])
 {
   print(c);
   println();
+}
+
+void TVout::println(const __FlashStringHelper *str)
+{
+	print(str);
+    println();
 }
 
 void TVout::println(char c, int base)
@@ -221,7 +243,11 @@ void TVout::print(uint8_t x, uint8_t y, const char str[]) {
 	cursor_x = x;
 	cursor_y = y;
 	write(str);
-	
+}
+void TVout::print(uint8_t x, uint8_t y, const __FlashStringHelper *str) {
+	cursor_x = x;
+	cursor_y = y;
+	print(str);
 }
 void TVout::print(uint8_t x, uint8_t y, char c, int base) {
 	cursor_x = x;
@@ -259,15 +285,87 @@ void TVout::print(uint8_t x, uint8_t y, double n, int digits) {
 	print(n,digits);
 }
 
+void TVout::println(uint8_t x, uint8_t y, const char c[])
+{
+	cursor_x = x;
+	cursor_y = y;
+	print(c);
+	println();
+}
+
+void TVout::println(uint8_t x, uint8_t y, const __FlashStringHelper *str)
+{
+	cursor_x = x;
+	cursor_y = y;
+	print(str);
+	println();
+}
+
+void TVout::println(uint8_t x, uint8_t y, char c, int base)
+{
+	cursor_x = x;
+	cursor_y = y;
+	print(c, base);
+	println();
+}
+
+void TVout::println(uint8_t x, uint8_t y, unsigned char b, int base)
+{
+	cursor_x = x;
+	cursor_y = y;
+	print(b, base);
+	println();
+}
+
+void TVout::println(uint8_t x, uint8_t y, int n, int base)
+{
+	cursor_x = x;
+	cursor_y = y;
+	print(n, base);
+	println();
+}
+
+void TVout::println(uint8_t x, uint8_t y, unsigned int n, int base)
+{
+	cursor_x = x;
+	cursor_y = y;
+	print(n, base);
+	println();
+}
+
+void TVout::println(uint8_t x, uint8_t y, long n, int base)
+{
+	cursor_x = x;
+	cursor_y = y;
+	print(n, base);
+	println();
+}
+
+void TVout::println(uint8_t x, uint8_t y, unsigned long n, int base)
+{
+	cursor_x = x;
+	cursor_y = y;
+	print(n, base);
+	println();
+}
+
+void TVout::println(uint8_t x, uint8_t y, double n, int digits)
+{
+	cursor_x = x;
+	cursor_y = y;
+	print(n, digits);
+	println();
+}
+
 void TVout::printNumber(unsigned long n, uint8_t base)
 {
-  unsigned char buf[8 * sizeof(long)]; // Assumes 8-bit chars. 
+  unsigned char buf[8 * sizeof(long)]; // Assumes 8-bit chars.
   unsigned long i = 0;
 
   if (n == 0) {
     print('0');
     return;
-  } 
+  }
 
   while (n > 0) {
     buf[i++] = n % base;
@@ -280,8 +378,8 @@ void TVout::printNumber(unsigned long n, uint8_t base)
       'A' + buf[i - 1] - 10));
 }
 
-void TVout::printFloat(double number, uint8_t digits) 
-{ 
+void TVout::printFloat(double number, uint8_t digits)
+{
   // Handle negative numbers
   if (number < 0.0)
   {
@@ -293,7 +391,7 @@ void TVout::printFloat(double number, uint8_t digits)
   double rounding = 0.5;
   for (uint8_t i=0; i<digits; ++i)
     rounding /= 10.0;
-  
+
   number += rounding;
 
   // Extract the integer part of the number and print it
@@ -303,7 +401,7 @@ void TVout::printFloat(double number, uint8_t digits)
 
   // Print the decimal point, but only if there are digits beyond
   if (digits > 0)
-    print("."); 
+    print(".");
 
   // Extract digits from the remainder one at a time
   while (digits-- > 0)
@@ -311,6 +409,6 @@ void TVout::printFloat(double number, uint8_t digits)
     remainder *= 10.0;
     int toPrint = int(remainder);
     print(toPrint);
-    remainder -= toPrint; 
-  } 
+    remainder -= toPrint;
+  }
 }
