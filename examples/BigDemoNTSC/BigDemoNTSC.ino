@@ -1,5 +1,5 @@
 #include <TVout.h>
-#include <fontALL.h>
+#include <TVoutfonts/fontALL.h>
 #include "schematic.h"
 #include "TVOlogo.h"
 
@@ -26,44 +26,44 @@ unsigned char cube2d[8][2];
 
 
 void setup() {
-  TV.begin(NTSC,120,96);
+  TV.begin(NTSC|OVERLAY,120,96);
   TV.select_font(font6x8);
   intro();
-  TV.println("I am the TVout\nlibrary running on a freeduino\n");
+  TV.println(F("I am the TVout\nlibrary running on a freeduino\n"));
   TV.delay(2500);
-  TV.println("I generate a PAL\nor NTSC composite  video using\ninterrupts\n");
+  TV.println(F("I generate a PAL\nor NTSC composite  video using\ninterrupts\n"));
   TV.delay(2500);
-  TV.println("My schematic:");
+  TV.println(F("My schematic:"));
   TV.delay(1500);
   TV.bitmap(0,0,schematic);
   TV.delay(10000);
   TV.clear_screen();
-  TV.println("Lets see what\nwhat I can do");
+  TV.println(F("Lets see what\nwhat I can do"));
   TV.delay(2000);
-  
+
   //fonts
   TV.clear_screen();
-  TV.println(0,0,"Multiple fonts:");
+  TV.println(0,0,F("Multiple fonts:"));
   TV.select_font(font4x6);
-  TV.println("4x6 font FONT");
+  TV.println(F("4x6 font FONT"));
   TV.select_font(font6x8);
-  TV.println("6x8 font FONT");
+  TV.println(F("6x8 font FONT"));
   TV.select_font(font8x8);
-  TV.println("8x8 font FONT");
+  TV.println(F("8x8 font FONT"));
   TV.select_font(font6x8);
   TV.delay(2000);
-  
+
   TV.clear_screen();
-  TV.print(9,44,"Draw Basic Shapes");
+  TV.print(9,44,F("Draw Basic Shapes"));
   TV.delay(2000);
-  
+
   //circles
   TV.clear_screen();
   TV.draw_circle(TV.hres()/2,TV.vres()/2,TV.vres()/3,WHITE);
   TV.delay(500);
   TV.draw_circle(TV.hres()/2,TV.vres()/2,TV.vres()/2,WHITE,INVERT);
   TV.delay(2000);
-  
+
   //rectangles and lines
   TV.clear_screen();
   TV.draw_rect(20,20,80,56,WHITE);
@@ -76,13 +76,13 @@ void setup() {
   TV.draw_line(10,10,110,86,INVERT);
   TV.draw_line(10,86,110,10,INVERT);
   TV.delay(2000);
-  
+
   //random cube forever.
   TV.clear_screen();
-  TV.print(16,40,"Random Cube");
-  TV.print(28,48,"Rotation");
+  TV.print(16,40,F("Random Cube"));
+  TV.print(28,48,F("Rotation"));
   TV.delay(2000);
-  
+
   randomSeed(analogRead(0));
 }
 

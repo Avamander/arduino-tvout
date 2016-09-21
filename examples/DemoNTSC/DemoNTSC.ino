@@ -1,5 +1,5 @@
 #include <TVout.h>
-#include <fontALL.h>
+#include <TVoutfonts/fontALL.h>
 
 TVout TV;
 unsigned char x,y;
@@ -7,7 +7,7 @@ unsigned char x,y;
 void setup()  {
   x=0;
   y=0;
-  TV.begin(PAL|OVERLAY);	//for devices with only 1k sram(m168) use TV.begin(_NTSC,128,56)
+  TV.begin(NTSC|OVERLAY);	//for devices with only 1k sram(m168) use TV.begin(_NTSC,128,56)
   TV.select_font(font6x8);
 }
 
