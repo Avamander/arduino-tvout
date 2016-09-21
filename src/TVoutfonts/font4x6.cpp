@@ -372,14 +372,14 @@ PROGMEM const unsigned char font4x6[] = {
 0b01000000,
 0b01000000,
 0b01000000,
-0b00000000, 
+0b00000000,
 //U
 0b10100000,
 0b10100000,
 0b10100000,
 0b10100000,
 0b11100000,
-0b00000000, 
+0b00000000,
 //V
 0b10100000,
 0b10100000,
@@ -422,8 +422,7 @@ PROGMEM const unsigned char font4x6[] = {
 0b10000000,
 0b11000000,
 0b00000000,
-0,				//for the life of me I have no idea why this is needed....
-//\
+// (backslash \ )
 0b10000000,
 0b10000000,
 0b01000000,

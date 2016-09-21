@@ -46,6 +46,9 @@ void (*vbi_hook)() = &empty;
 // sound properties
 volatile long remainingToneVsyncs;
 
+// forward declaration
+static void inline wait_until(uint8_t time);
+
 void empty() {}
 
 void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {

@@ -34,6 +34,9 @@
 
 #include "TVout.h"
 
+// forward declaration
+static void inline sp(unsigned char x, unsigned char y, char c);
+
 
 /* Call this to start video output with the default resolution.
  *
@@ -634,7 +637,7 @@ void TVout::bitmap(uint8_t x, uint8_t y, const unsigned char * bmp,
 	for (uint8_t l = 0; l < lines; l++) {
 		si = (y + l)*display.hres + x/8;
 		if (width == 1)
-			temp = 0xff >> rshift + xtra;
+			temp = (0xff >> rshift) + xtra;
 		else
 			temp = 0;
 		save = screen[si];
@@ -648,9 +651,9 @@ void TVout::bitmap(uint8_t x, uint8_t y, const unsigned char * bmp,
 			screen[si++] |= temp >> rshift;
 		}
 		if (rshift + xtra < 8)
-			screen[si-1] |= (save & (0xff >> rshift + xtra));	//test me!!!
+			screen[si-1] |= (save & ((0xff >> rshift) + xtra));	//test me!!!
 		if (rshift + xtra - 8 > 0)
-			screen[si] &= (0xff >> rshift + xtra - 8);
+			screen[si] &= ((0xff >> rshift) + xtra - 8);
 		screen[si] |= temp << lshift;
 	}
 } // end of bitmap
