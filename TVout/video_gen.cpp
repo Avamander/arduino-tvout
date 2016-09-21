@@ -239,15 +239,11 @@ void first_frame_blank_line() {
 		display.vscale = display.vscale_const;
 		line_handler = &first_frame_active_line;
 
-		if (remainingToneVsyncs != 0) {
-			if (remainingToneVsyncs > 0)
-			{
-				remainingToneVsyncs--;
+		if (remainingToneVsyncs > 0) {
+			if (--remainingToneVsyncs == 0) {
+				TCCR2B = 0; //stop the tone
+				PORTB &= ~(_BV(SND_PIN));
 			}
-		}
-		else {
-			TCCR2B = 0; //stop the tone
- 			PORTB &= ~(_BV(SND_PIN));
 		}
 
 		vbi_hook();
@@ -342,15 +338,11 @@ void second_frame_blank_line() {
 		display.vscale = display.vscale_const;
 		line_handler = &second_frame_active_line;
 
-		if (remainingToneVsyncs != 0) {
-			if (remainingToneVsyncs > 0)
-			{
-				remainingToneVsyncs--;
+		if (remainingToneVsyncs > 0) {
+			if (--remainingToneVsyncs == 0) {
+				TCCR2B = 0; //stop the tone
+				PORTB &= ~(_BV(SND_PIN));
 			}
-		}
-		else {
-			TCCR2B = 0; //stop the tone
-			PORTB &= ~(_BV(SND_PIN));
 		}
 
 		vbi_hook();
