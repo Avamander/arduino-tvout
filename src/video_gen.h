@@ -44,6 +44,7 @@ typedef struct {
 	int lines_frame; 		//remove me
 	uint8_t vres;
 	uint8_t hres;
+	uint16_t size;
 	uint8_t output_delay; 	//remove me
 	char vscale_const;		//combine me with status switch
 	char vscale;			//combine me too.

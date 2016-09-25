@@ -33,6 +33,7 @@
 */
 
 #include "TVout.h"
+#include <string.h>
 
 // forward declaration
 static void inline sp(unsigned char x, unsigned char y, char c);
@@ -113,18 +114,19 @@ void TVout::fill(uint8_t color) {
 		case BLACK:
 			cursor_x = 0;
 			cursor_y = 0;
-			for (int i = 0; i < display.hres*display.vres; i++)
-				display.screen[i] = 0;
+			memset(display.screen, 0, display.size);
 			break;
 		case WHITE:
 			cursor_x = 0;
 			cursor_y = 0;
-			for (int i = 0; i < display.hres*display.vres; i++)
-				display.screen[i] = 0xFF;
+			memset(display.screen, 0xFF, display.size);
 			break;
 		case INVERT:
-			for (int i = 0; i < display.hres*display.vres; i++)
-				display.screen[i] = ~display.screen[i];
+			unsigned char *p = display.screen;
+			uint16_t i = display.size;
+			while (i--) {
+				*p++ ^= 0xFF;
+			}
 			break;
 	}
 } // end of fill

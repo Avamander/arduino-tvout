@@ -56,6 +56,7 @@ void render_setup(uint8_t mode, uint8_t x, uint8_t y, uint8_t *scrnptr) {
 	display.hres = x;
 	display.vres = y;
 	display.frames = 0;
+	display.size = x * y;
 
 	if (mode & PAL)
 		display.vscale_const = _PAL_LINE_DISPLAY/display.vres - 1;
