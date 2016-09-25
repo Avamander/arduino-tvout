@@ -70,6 +70,7 @@ public:
 
 	char begin(uint8_t mode);
 	char begin(uint8_t mode, uint8_t x, uint8_t y);
+	char begin(uint8_t mode, uint8_t x, uint8_t y, uint8_t *framebuffer);
 	void end();
 
 	//accessor functions

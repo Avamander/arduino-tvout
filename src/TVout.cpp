@@ -39,18 +39,19 @@
 static void inline sp(unsigned char x, unsigned char y, char c);
 
 
-/* Call this to start video output with the default resolution.
+/* Call this to start video output with the default resolution (128x96).
  *
  * Arguments:
  *	mode:
- *		The video standard to follow and wheter to use overlay (bitset):
+ *		The video standard to follow and whether to use overlay (bitset):
  *		NTSC	=0	=_NTSC
  *		PAL		=1	=_PAL
  *		OVERLAY =2	=_OVERLAY
  *
- * Returns:
- *	0 if no error.
- *	4 if there is not enough memory.
+ *  Returns:
+ *	  0 if no error.
+ *		1 if x is not divisable by 8.
+ *	  4 if there is not enough memory.
  */
 char TVout::begin(uint8_t mode) {
 	return begin(mode,128,96);
@@ -61,9 +62,10 @@ char TVout::begin(uint8_t mode) {
  *
  * Arguments:
  *	mode:
- *		The video standard to follow:
- *		PAL		=1	=_PAL
+ *		The video standard to follow and whether to use overlay (bitset):
  *		NTSC	=0	=_NTSC
+ *		PAL		=1	=_PAL
+ *		OVERLAY =2	=_OVERLAY
  *	x:
  *		Horizonal resolution must be divisable by 8.
  *	y:
@@ -72,7 +74,6 @@ char TVout::begin(uint8_t mode) {
  *	Returns:
  *		0 if no error.
  *		1 if x is not divisable by 8.
- *		2 if y is to large (NTSC only cannot fill PAL vertical resolution by 8bit limit)
  *		4 if there is not enough memory for the frame buffer.
  */
 char TVout::begin(uint8_t mode, uint8_t x, uint8_t y) {
@@ -81,9 +82,40 @@ char TVout::begin(uint8_t mode, uint8_t x, uint8_t y) {
 		return 1;
 	x = x/8;
 
-	screen = (unsigned char*)malloc(x * y * sizeof(unsigned char));
-	if (screen == NULL)
+	uint8_t *framebuffer = (uint8_t *)malloc(x * y * sizeof(uint8_t));
+	if (framebuffer == NULL)
 		return 4;
+
+	return begin(mode, x, y, framebuffer);
+} // end of begin
+
+
+/* call this to start video output with a specified resolution.
+ *
+ * Arguments:
+ *	mode:
+ *		The video standard to follow and whether to use overlay (bitset):
+ *		NTSC	=0	=_NTSC
+ *		PAL		=1	=_PAL
+ *		OVERLAY =2	=_OVERLAY
+ *	x:
+ *		Horizonal resolution must be divisable by 8.
+ *	y:
+ *		Vertical resolution.
+ *  framebuffer:
+ *    Pre-allocated buffer of at least (x/8 * y) bytes in size.
+ *
+ *	Returns:
+ *		0 if no error.
+ *		1 if x is not divisable by 8.
+ */
+char TVout::begin(uint8_t mode, uint8_t x, uint8_t y, uint8_t *framebuffer) {
+	// check if x is divisable by 8
+	if ( !(x & 0xF8))
+		return 1;
+	x = x/8;
+
+	screen = framebuffer;
 
 	cursor_x = 0;
 	cursor_y = 0;
