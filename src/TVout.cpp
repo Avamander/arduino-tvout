@@ -404,29 +404,35 @@ void TVout::draw_row(uint8_t line, uint16_t x0, uint16_t x1, uint8_t c) {
 		}
 		lbit = 0xff >> (x0&7);
 		x0 = x0/8 + display.hres*line;
-		rbit = ~(0xff >> (x1&7));
+		rbit = 0xff << (7 - (x1&7));
 		x1 = x1/8 + display.hres*line;
 		if (x0 == x1) {
 			lbit = lbit & rbit;
-			rbit = 0;
-		}
-		if (c == WHITE) {
-			screen[x0++] |= lbit;
-			while (x0 < x1)
-				screen[x0++] = 0xff;
-			screen[x0] |= rbit;
-		}
-		else if (c == BLACK) {
-			screen[x0++] &= ~lbit;
-			while (x0 < x1)
-				screen[x0++] = 0;
-			screen[x0] &= ~rbit;
-		}
-		else if (c == INVERT) {
-			screen[x0++] ^= lbit;
-			while (x0 < x1)
-				screen[x0++] ^= 0xff;
-			screen[x0] ^= rbit;
+			if (c == WHITE)
+				screen[x0] |= lbit;
+			else if (c == BLACK)
+				screen[x0] &= ~lbit;
+			else if (c == INVERT)
+				screen[x0] ^= lbit;
+		} else {
+			if (c == WHITE) {
+				screen[x0++] |= lbit;
+				while (x0 < x1)
+					screen[x0++] = 0xff;
+				screen[x0] |= rbit;
+			}
+			else if (c == BLACK) {
+				screen[x0++] &= ~lbit;
+				while (x0 < x1)
+					screen[x0++] = 0;
+				screen[x0] &= ~rbit;
+			}
+			else if (c == INVERT) {
+				screen[x0++] ^= lbit;
+				while (x0 < x1)
+					screen[x0++] ^= 0xff;
+				screen[x0] ^= rbit;
+			}
 		}
 	}
 } // end of draw_row
@@ -446,7 +452,6 @@ void TVout::draw_row(uint8_t line, uint16_t x0, uint16_t x1, uint8_t c) {
  *		(see color note at the top of this file)
 */
 void TVout::draw_column(uint8_t row, uint16_t y0, uint16_t y1, uint8_t c) {
-
 	unsigned char bit;
 	int byte;
 
@@ -503,18 +508,29 @@ void TVout::draw_column(uint8_t row, uint16_t y0, uint16_t y1, uint8_t c) {
  *		The fill color of the rectangle.
  *		(see color note at the top of this file)
  *		default =-1 (no fill)
-*/
+ */
 void TVout::draw_rect(uint8_t x0, uint8_t y0, uint8_t w, uint8_t h, char c, char fc) {
 	uint8_t x1 = x0+w-1;
 	uint8_t y1 = y0+h-1;
-	if (fc != -1) {
-		for (unsigned char i = y0; i < y1; i++)
-			draw_row(i,x0,x1,fc);
+	if (w==0 || h==0)
+		return;
+	if (c == fc) {
+		for (unsigned char i = y0; i <= y1; i++)
+			draw_row(i,x0,x1,c);
+	} else {
+		if (fc != -1 && w>2 && h>2) {
+			for (unsigned char i = y0+1; i <= y1-1; i++)
+				draw_row(i,x0+1,x1-1,fc);
+		}
+		draw_row(y0,x0,x1,c);
+		if (h>1)
+			draw_row(y1,x0,x1,c);
+		if (h>2) {
+			draw_column(x0,y0+1,y1-1,c);
+			if (w>1)
+				draw_column(x1,y0+1,y1-1,c);
+		}
 	}
-	draw_line(x0,y0,x1,y0,c);
-	draw_line(x0,y0,x0,y1,c);
-	draw_line(x1,y0,x1,y1,c);
-	draw_line(x0,y1,x1,y1,c);
 } // end of draw_rect
 
 
