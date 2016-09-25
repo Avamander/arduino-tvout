@@ -55,7 +55,7 @@ void TVout::write(const char *str)
 /* default implementation: may be overridden */
 void TVout::write(const __FlashStringHelper *str)
 {
-	const char PROGMEM *p = (const char PROGMEM *)str;
+	const char *p = (const char *)str;
 	char c;
 	while ((c = pgm_read_byte(p))) {
 		p++;
