@@ -10,21 +10,21 @@ There are some timing issues with the m1284p, may be related to sanguino core.
 
 ##Connections
 
-```
-MCU         SYNCOUT	AUDIOOUT	VIDEO    VSYNCIN CSYNCIN
-m168,m328	PB1	    PB3	        PD7      INT0    ICP1
-m1280,m2560	B 5	    B 4	        A7       INT0    ICP1
-m644,m1284p	D 5	    D 7	        A7
-m32u4       B 5	    B 7	        B4
-AT90USB1286	B 5	    B 4	        F7
+MCU | SYNCOUT | AUDIOOUT | VIDEO | VSYNCIN | CSYNCIN
+---|---|---|---|---|---
+m168,m328 | PB1 | PB3 | PD7 | INT0 | ICP1
+m1280,m2560 | B 5 | B 4 | A7 | INT0 | ICP1
+m644,m1284p | D 5 | D 7 | A7 | |
+m32u4 | B 5 | B 7 | B4 | |
+AT90USB1286 | B 5 | B 4 | F7 | |
 
-Arduino	        SYNCOUT	  AUDIOOUT	VIDEO    VSYNCIN CSYNCIN
-NG,Decimila,UNO	9	      11	    7        2       8
-Mega            11	      10	    A7(D29)  21
-sanguino        13	      8	        A7(D24)
-Leonardo        9         11        8
-Nano            D9        D11       D7       D2      D8
-```
+Arduino | SYNCOUT | AUDIOOUT | VIDEO | VSYNCIN | CSYNCIN
+---|---|---|---|---|---
+NG,Decimila,UNO | 9 | 11 | 7 | 2 | 8
+Mega | 11 | 10 | A7(D29) | 21
+sanguino | 13 | 8 | A7(D24)
+Leonardo | 9 | 11 | 8
+Nano | D9 | D11 | D7 | D2 | D8
 
 SYNCOUT is on OCR1A and AUDIOOUT is on OCR2A (except on the Arduino Leonardo, where AUDIOOUT is on OCR0A)
 
