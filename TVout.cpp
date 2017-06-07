@@ -679,7 +679,7 @@ void TVout::shift(uint8_t distance, uint8_t direction) {
 			src = display.screen + distance*display.hres;
 			end = display.screen + display.vres*display.hres;
 				
-			while (src <= end) {
+			while (src < end) {
 				*dst = *src;
 				*src = 0;
 				dst++;
@@ -687,7 +687,7 @@ void TVout::shift(uint8_t distance, uint8_t direction) {
 			}
 			break;
 		case DOWN:
-			dst = display.screen + display.vres*display.hres;
+			dst = display.screen + display.vres*display.hres - 1;
 			src = dst - distance*display.hres;
 			end = display.screen;
 				
