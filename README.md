@@ -8,7 +8,7 @@ Currently the output is NTSC or PAL at a resolution of 128x96 by default. The li
 
 There are some timing issues with the m1284p, may be related to sanguino core.
 
-##Connections
+## Connections
 
 MCU | SYNCOUT | AUDIOOUT | VIDEO | VSYNCIN | CSYNCIN
 ---|---|---|---|---|---
@@ -34,7 +34,7 @@ On NG, Decimila, UNO and Nano the SYNCOUT is pin 9, video on 7 and AUDIOOUT on 1
 On Mega2560	SYNCOUT is pin 11, video is on A7(D29) and AUDIOOUT is on pin 10.
 
 
-##Examples
+## Examples
 
 https://youtu.be/MEg_V4YZDh0
 
