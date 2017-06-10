@@ -13,10 +13,10 @@ There are some timing issues with the m1284p, may be related to sanguino core.
 MCU | SYNCOUT | AUDIOOUT | VIDEO | VSYNCIN | CSYNCIN
 ---|---|---|---|---|---
 m168,m328 | PB1 | PB3 | PD7 | INT0 | ICP1
-m1280,m2560 | B 5 | B 4 | A7 | INT0 | ICP1
-m644,m1284p | D 5 | D 7 | A7 | |
-m32u4 | B 5 | B 7 | B4 | |
-AT90USB1286 | B 5 | B 4 | F7 | |
+m1280,m2560 | PB5 | PB4 | PA7 | INT0 | ICP1
+m644,m1284p | PD5 | PD7 | PA7 | |
+m32u4 | PB5 | PB7 | PB4 | |
+AT90USB1286 | PB5 | PB4 | PF7 | |
 
 Arduino | SYNCOUT | AUDIOOUT | VIDEO | VSYNCIN | CSYNCIN
 ---|---|---|---|---|---
