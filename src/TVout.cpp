@@ -80,9 +80,8 @@ char TVout::begin(uint8_t mode, uint8_t x, uint8_t y) {
 	// check if x is divisable by 8
 	if ( !(x & 0xF8))
 		return 1;
-	x = x/8;
 
-	uint8_t *framebuffer = (uint8_t *)malloc(x * y * sizeof(uint8_t));
+	uint8_t *framebuffer = (uint8_t *)malloc((x/8) * y * sizeof(uint8_t));
 	if (framebuffer == NULL)
 		return 4;
 
