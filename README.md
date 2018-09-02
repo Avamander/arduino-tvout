@@ -1,6 +1,8 @@
 # Arduino-TVout
 
-This is a library for generating composite video on an ATmega microcontroller. Hosted here to keep it available from Arduino IDE (and for simple download as the original Google Code has been archived).
+# Hosted here to keep it available from Arduino IDE (and for simple download as the original Google Code has been archived).
+
+This is a library for generating composite video on an ATmega microcontroller. 
 
 This branch of the TVout library has been patched to allow use with the Arduino Leonardo. The goal of this project is to create a simple interupt driven library for generating composite video on a single AVR chip.
 
