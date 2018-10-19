@@ -32,3 +32,16 @@ On NG, Decimila, UNO and Nano the sync is pin 9, video on 7 and audio on 11. On 
 https://youtu.be/MEg_V4YZDh0
 
 https://youtu.be/bHpFv_x_8Kk
+
+
+## Throubleshooting
+
+Also always remember that this library could give problems to your arduino bootloader, expecially if it's not an original one and it uses a modified bootloader.
+
+If the bootloader is damaged by the usage of the library(it happens some times) you need another arduino or eventually an RPi in order to reflash the bootloader on it and also you need of the bootloader.hex file that, if your arduino is original, you should be able to find in some folders of the Arduino IDE, otherwise you have to search the internet for it and hope it doesn't burn up your arduino.
+
+Here I link a bunch of detailed tutorials I've used lately to save my arduinos:
+
+- RPi - Arduino solution : https://learn.adafruit.com/program-an-avr-or-arduino-using-raspberry-pi-gpio-pins/programming
+
+- Arduino - Arduino and other possible solutions : https://learn.sparkfun.com/tutorials/installing-an-arduino-bootloader/all
