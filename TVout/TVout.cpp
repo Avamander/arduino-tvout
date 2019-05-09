@@ -61,7 +61,7 @@ char TVout::begin(uint8_t mode) {
  *		PAL		=1	=_PAL
  *		NTSC	=0	=_NTSC
  *	x:
- *		Horizonal resolution must be divisable by 8.
+ *		Horizontal resolution must be divisable by 8.
  *	y:
  *		Vertical resolution.
  *
@@ -131,7 +131,7 @@ void TVout::fill(uint8_t color) {
 /* Gets the Horizontal resolution of the screen
  *
  * Returns: 
- *	The horizonal resolution.
+ *	The horizontal resolution.
 */
 unsigned char TVout::hres() {
 	return display.hres*8;
@@ -490,7 +490,7 @@ void TVout::draw_column(uint8_t row, uint16_t y0, uint16_t y1, uint8_t c) {
  *	y0:
  *		The y coordinate of upper left corner of the rectangle.
  *	w:
- *		The widht of the rectangle.
+ *		The width of the rectangle.
  *	h:
  *		The height of the rectangle.
  *	c:
@@ -529,7 +529,7 @@ void TVout::draw_rect(uint8_t x0, uint8_t y0, uint8_t w, uint8_t h, char c, char
  *	fc:
  *		The color to fill the circle.
  *		(see color note at the top of this file)
- *		defualt  =-1 (do not fill)
+ *		default  =-1 (do not fill)
  */
 void TVout::draw_circle(uint8_t x0, uint8_t y0, uint8_t radius, char c, char fc) {
 
@@ -774,7 +774,7 @@ void TVout::set_vbi_hook(void (*func)()) {
 } // end of set_vbi_hook
 
 
-/* set the horizonal blank function call
+/* set the horizontal blank function call
  * This function passed to this function will be called one per scan line.
  * The function MUST be VERY FAST(~2us max).
  *

@@ -135,7 +135,7 @@ __asm__ __volatile__ (
 		ANDI_HWS
 	".endm\n"
 	
-	// ouput 1 bit port safe
+	// output 1 bit port safe
 	".macro o1bs p\n\t"
 		BLD_HWS
 		"out	\\p,r16\n"

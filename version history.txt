@@ -12,7 +12,7 @@ R6 (June 2010) (Currently Beta at 5.9):
 	-the interrupt now uses the timer1 overflow vector.  Leaving compare match b for
 	 intitiating the rendering(does not do this yet)
 	-the line handler portion of line interrupt is now handled by a function pointer
-	 and functions that corrispond to each of the 3 possible line types.
+	 and functions that correspond to each of the 3 possible line types.
 	-Switched the actual rendering to an assembly loop that will work for resolutions
 	 all the way up to 192pixels(at 16mhz). This cuts off down the required flash
 	 by 1.5kbytes.
@@ -62,12 +62,12 @@ R2 (May 2nd 2010):
 		-to render in pal call  start_render(_PAL);
 		-to render in NTSC call start_render(_NTSC);
 	-centered video better.
-	-reduced system to useing one interupt, this will allow for adding sound, and or
-	 support for polling the UART/SPI/ect. once per scanline.
+	-reduced system to using one interrupt, this will allow for adding sound, and or
+	 support for polling the UART/SPI/etc. once per scanline.
 	-now renders full half frames(262 lines) instead of 255 lines for NTSC
 	-modified fonts to be less horrid looking.
 	-slightly faster line rendering.
-	-Fixed issue with line rendering not working on last horizonal pixel
+	-Fixed issue with line rendering not working on last horizontal pixel
 	-added support for pausing video; output still issues h sync
 		-pause:  pause_render();
 		-resume: resume_render();
