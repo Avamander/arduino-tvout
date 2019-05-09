@@ -25,7 +25,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 /*
 This library provides a simple method for outputting data to a tv
 from a frame buffer stored in sram.  This implementation is done
-completly by interupt and will return give as much cpu time to the
+completely by interrupt and will return give as much cpu time to the
 application as possible.
 */
 #ifndef TVOUT_H
