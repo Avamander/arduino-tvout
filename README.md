@@ -2,7 +2,7 @@
 
 # Hosted here to keep it available from Arduino IDE (and for simple download as the original Google Code has been archived).
 
-In order to use the library, place this library's folders in your `libraries` folder.
+In order to use the library, place this library's folders (`TVout` and `TVoutfonts`) in your `libraries` folder.
 
 This is a library for generating composite video on an ATmega AVR microcontroller. 
 
