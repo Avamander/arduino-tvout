@@ -78,7 +78,7 @@ void TVout::write(uint8_t c) {
 			//clear_screen();
 			break;
 		default:
-			if (cursor_x >= (display.hres*8 - pgm_read_byte(font))) {
+			if (cursor_x > (display.hres*8 - pgm_read_byte(font))) {
 				cursor_x = 0;
 				inc_txtline();
 				print_char(cursor_x,cursor_y,c);
