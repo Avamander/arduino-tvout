@@ -43,7 +43,7 @@ class pollserial : public Print {
 		uint8_t available(void);
 		int read(void);
 		void flush(void);
-		virtual void write(uint8_t);
+		virtual size_t write(uint8_t);
 		using Print::write; // pull in write(str) and write(buf, size) from Print
 };
 
